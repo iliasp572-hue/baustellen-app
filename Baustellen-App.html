@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Baustellen-Zentrale</title>
+<style>
+  /* ======================================================================
+     KONFIG: Diese 3 Werte trägt Claude ein, sobald die Make-Webhooks stehen.
+     ====================================================================== */
+  :root{
+    --bg:#eef2f6;--panel:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
+    --primary:#0284c7;--primary-d:#0369a1;--accent:#16a34a;--accent-l:#dcfce7;
+    --danger:#dc2626;--danger-l:#fee2e2;--neutral:#94a3b8;
+    --shadow:0 1px 3px rgba(15,23,42,.08),0 8px 24px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
+  button{font-family:inherit;cursor:pointer}
+  .hide{display:none!important}
+
+  /* Header */
+  header.top{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:var(--shadow)}
+  .top-in{display:flex;align-items:center;gap:12px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top))}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px;letter-spacing:-.2px}
+  .brand .logo{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#0284c7,#16a34a);display:grid;place-items:center;color:#fff;flex:none}
+  .spacer{flex:1}
+  .iconbtn{border:1px solid var(--line);background:var(--panel);border-radius:10px;width:38px;height:38px;display:grid;place-items:center;color:var(--muted)}
+  .iconbtn:active{background:#f1f5f9}
+  .iconbtn svg{width:18px;height:18px}
+
+  .wrap{max-width:860px;margin:0 auto;padding:0 14px 40px}
+
+  /* Gate / passcode */
+  .gate{min-height:100dvh;display:grid;place-items:center;padding:24px}
+  .gate-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:26px;width:100%;max-width:360px;text-align:center}
+  .gate-card .logo{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#0284c7,#16a34a);display:grid;place-items:center;color:#fff;margin:0 auto 14px}
+  .gate-card h1{font-size:20px;margin:0 0 4px}
+  .gate-card p{color:var(--muted);font-size:14px;margin:0 0 18px}
+  .code-in{width:100%;text-align:center;font-size:22px;letter-spacing:6px;font-weight:700;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  .btn{border:1px solid var(--primary);background:var(--primary);color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;font-size:15px;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+  .btn:active{background:var(--primary-d)}
+  .btn.sec{background:var(--panel);color:var(--ink);border-color:var(--line)}
+  .err{color:var(--danger);font-size:13px;min-height:18px;margin-top:8px}
+
+  /* States */
+  .center{min-height:60dvh;display:grid;place-items:center;text-align:center;color:var(--muted);padding:24px}
+  .spin{width:34px;height:34px;border:3px solid #cbd5e1;border-top-color:var(--primary);border-radius:50%;animation:s .8s linear infinite;margin:0 auto 12px}
+  @keyframes s{to{transform:rotate(360deg)}}
+
+  /* Board */
+  .page-h{display:flex;align-items:center;gap:10px;margin:16px 2px 4px}
+  .page-h h2{font-size:19px;margin:0;letter-spacing:-.3px}
+  .page-h .sub{color:var(--muted);font-size:13px}
+  .col-h{display:flex;align-items:center;gap:8px;margin:18px 2px 8px;font-weight:800;font-size:13px;color:#475569;text-transform:uppercase;letter-spacing:.4px}
+  .col-h .dot{width:9px;height:9px;border-radius:50%}
+  .col-h .cnt{margin-left:auto;background:#e9eef4;color:var(--muted);font-size:12px;border-radius:999px;padding:1px 9px;font-weight:800}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(15,23,42,.05);display:flex;align-items:center;gap:12px}
+  .card:active{background:#f8fafc}
+  .card .main{flex:1;min-width:0}
+  .card h3{margin:0 0 3px;font-size:16px;letter-spacing:-.2px}
+  .card .addr{color:var(--muted);font-size:13px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .chip{font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:999px}
+  .chip.ok{background:var(--accent-l);color:#166534}.chip.bad{background:var(--danger-l);color:#991b1b}
+  .chip.pk{background:#f1f5f9;color:#475569}.chip.plan{background:#e0f2fe;color:#075985}
+  .card .chev{color:#cbd5e1;flex:none}
+
+  /* Detail */
+  .back{background:transparent;border:0;color:var(--primary-d);font-weight:800;font-size:15px;display:inline-flex;align-items:center;gap:6px;padding:14px 2px}
+  .d-head h2{margin:0;font-size:21px;letter-spacing:-.3px}
+  .d-head .addr{color:var(--muted);font-size:14px;margin-top:3px}
+  .plan-row{display:flex;gap:10px;margin:14px 0}
+  .plan-row a,.plan-row button{flex:1;text-decoration:none;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:12px;font-weight:700;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:8px}
+  .plan-row .wa{background:var(--accent);border-color:var(--accent);color:#fff}
+  .prog{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 0;box-shadow:var(--shadow)}
+  .prog .top{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-weight:600}
+  .prog .bar{height:8px;background:#eef2f6;border-radius:5px;margin-top:8px;overflow:hidden}
+  .prog .bar > i{display:block;height:100%;background:var(--accent);transition:width .25s}
+
+  /* Material list (mobile cards) */
+  .legend{display:flex;gap:14px;margin:8px 2px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:12px;height:12px;border-radius:4px}
+  .m{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+  .m.off{opacity:.5}
+  .m .mtop{display:flex;align-items:center;gap:10px}
+  .m .name{font-weight:700;font-size:15px;flex:1}
+  .m .pk{width:26px;height:26px;accent-color:var(--accent)}
+  .m .fields{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;align-items:end}
+  .m .fld{text-align:center}
+  .m .fld label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;margin-bottom:4px}
+  .m .fld .val{font-size:17px;font-weight:800;color:var(--primary-d);padding:7px 0}
+  .m .fld input{width:100%;text-align:center;font-size:17px;font-weight:800;padding:8px 2px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
+  .m .fld input:focus{outline:2px solid #bae6fd;border-color:var(--primary)}
+  .div-badge{display:inline-block;min-width:100%;padding:8px 0;border-radius:9px;font-weight:800;font-size:17px}
+  .div-badge.ok{background:var(--accent-l);color:#166534}.div-badge.bad{background:var(--danger-l);color:#991b1b}.div-badge.neutral{background:#f1f5f9;color:var(--neutral)}
+
+  /* Toast + save indicator */
+  .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;background:#0f172a;color:#fff;padding:11px 18px;border-radius:12px;font-size:14px;font-weight:700;box-shadow:var(--shadow);z-index:60;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.bad{background:var(--danger)}
+  .savechip{position:fixed;right:14px;bottom:calc(16px + env(safe-area-inset-bottom));background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;z-index:55;display:none;align-items:center;gap:7px}
+  .savechip.show{display:inline-flex}
+  .savechip.ok{color:var(--accent)}.savechip.busy{color:var(--muted)}
+
+  @media(max-width:380px){.m .fields{gap:6px}.m .fld .val,.m .fld input,.div-badge{font-size:15px}}
+</style>
+</head>
+<body>
+
+<!-- ===== PASSCODE-GATE ===== -->
+<div id="gate" class="gate">
+  <div class="gate-card">
+    <div class="logo"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/></svg></div>
+    <h1>Baustellen-Zentrale</h1>
+    <p>Bitte Zugangscode eingeben</p>
+    <input id="codeIn" class="code-in" type="tel" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off">
+    <button class="btn" id="codeBtn">Öffnen</button>
+    <div class="err" id="codeErr"></div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app" class="hide">
+  <header class="top">
+    <div class="top-in">
+      <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/></svg></span><span id="hTitle">Zentrale</span></div>
+      <div class="spacer"></div>
+      <button class="iconbtn" id="reloadBtn" title="Neu laden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg></button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div id="loading" class="center"><div><div class="spin"></div>Daten werden geladen …</div></div>
+    <div id="errbox" class="center hide"></div>
+    <div id="board" class="hide"></div>
+    <div id="detail" class="hide"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="savechip" id="savechip"></div>
+
+<script>
+/* ============================================================
+   KONFIG  —  Claude füllt GET_URL und SAVE_URL nach dem Bau der
+   Make-Webhooks. CODE ist der Zugangscode für die App.
+   ============================================================ */
+const CONFIG = {
+  GET_URL:  "https://hook.eu2.make.com/9gj1j5y1ep3zfgyww8mj60pon4lbuhfd",     // Make-Webhook, der Baustellen + Material liefert
+  SAVE_URL: "https://hook.eu2.make.com/uf4gr5b22a0x9sdpdp4nv5lpbjp475qn",    // Make-Webhook, der Outbound/Inbound/Gepackt speichert
+  CODE:     "2468"             // Zugangscode (kannst du frei ändern)
+};
+
+/* ---------- Airtable-Feldnamen ---------- */
+const F = {
+  siteName:["Name"], siteAddr:["Adresse"], siteStatus:["Status"], siteDate:["Termin"],
+  sitePlan:["Belegungsplan"], siteMaterial:["Material"],
+  mArtikel:["Artikel"], mSite:["Baustelle"], mBen:["Benoetigt","Benötigt"],
+  mOut:["Outbound"], mIn:["Inbound"], mGepackt:["Gepackt"]
+};
+const STATUS = [
+  ["Neu aus CRM","#8b5cf6"],["Planung Buero","#0284c7"],["Bereit gepackt","#0891b2"],
+  ["Auf Baustelle","#d97706"],["Abgeschlossen","#16a34a"]
+];
+
+/* ---------- Helpers ---------- */
+const $=s=>document.querySelector(s);
+function recs(x){ if(!x) return []; if(Array.isArray(x)) return x; if(Array.isArray(x.records)) return x.records; return []; }
+function fv(rec,keys,def=""){ const f=rec.fields||rec; for(const k of keys){ if(f[k]!==undefined&&f[k]!==null) return f[k]; } return def; }
+function num(v){ return v===""||v===null||v===undefined?"":Number(v); }
+function toast(t,bad){ const e=$("#toast"); e.textContent=t; e.className="toast show"+(bad?" bad":""); clearTimeout(e._t); e._t=setTimeout(()=>e.className="toast",2200); }
+function saveState(s){ const e=$("#savechip"); if(!s){e.className="savechip";return;} e.className="savechip show "+(s==="ok"?"ok":"busy"); e.textContent=s==="ok"?"✓ Gespeichert":"Speichern…"; if(s==="ok"){clearTimeout(e._t);e._t=setTimeout(()=>e.className="savechip",1400);} }
+
+/* ---------- Demo-Daten (nur bis Make verbunden ist) ---------- */
+function buildDemo(){
+  const ART=[["Schiene 2,4m",10],["Dachhaken L",15],["Schrauben 8x100",40],["Mittelklemmen",30],["Endklemme",8],["Solarkabel",50],["Stäubli MC4",20],["Kabelbinder",100]];
+  const sites=[
+    {id:"s1",fields:{Name:"Familie Weber",Adresse:"Musterstraße 12, 8500 Frauenfeld",Termin:"12.07.2026",Status:"Auf Baustelle",Belegungsplan:[{url:"https://example.com/plan.pdf",filename:"Plan_Weber.pdf"}]}},
+    {id:"s2",fields:{Name:"Bäckerei Klein",Adresse:"Hauptweg 5, 9000 St. Gallen",Termin:"15.07.2026",Status:"Planung Buero"}},
+    {id:"s3",fields:{Name:"Sonnendach GmbH",Adresse:"Industriestr. 8, 8280 Kreuzlingen",Status:"Neu aus CRM"}}
+  ];
+  const materials=[]; let i=0;
+  ART.forEach(([name,ben])=>{
+    const buf=Math.max(2,Math.round(ben*0.15));
+    materials.push({id:"m"+(i++),fields:{Artikel:name,Baustelle:["s1"],Benoetigt:ben,Outbound:ben+buf,Inbound:buf,Gepackt:true}});
+    materials.push({id:"m"+(i++),fields:{Artikel:name,Baustelle:["s2"],Benoetigt:ben}});
+  });
+  const dev=materials.find(m=>m.fields.Baustelle[0]==="s1"&&m.fields.Artikel==="Mittelklemmen");
+  if(dev) dev.fields.Inbound=0; // Div weicht ab -> rot
+  return {sites,materials};
+}
+
+let DATA = { sites:[], materials:[] };
+let openId = null;
+
+/* ---------- Gate ---------- */
+function unlock(){
+  const v=$("#codeIn").value.trim();
+  if(v===String(CONFIG.CODE)){ sessionStorage.setItem("bz_ok","1"); $("#gate").classList.add("hide"); $("#app").classList.remove("hide"); load(); }
+  else { $("#codeErr").textContent="Falscher Code."; $("#codeIn").value=""; }
+}
+$("#codeBtn").onclick=unlock;
+$("#codeIn").addEventListener("keydown",e=>{ if(e.key==="Enter") unlock(); });
+if(sessionStorage.getItem("bz_ok")==="1"){ $("#gate").classList.add("hide"); $("#app").classList.remove("hide"); }
+
+/* ---------- Laden ---------- */
+async function load(){
+  openId=null;
+  $("#loading").classList.remove("hide"); $("#board").classList.add("hide");
+  $("#detail").classList.add("hide"); $("#errbox").classList.add("hide");
+  // Von Make eingebettete Daten (hook.eu2.make.com liefert die Seite mit Daten)
+  if(window.__DATA__){
+    DATA.sites=recs(window.__DATA__.sites); DATA.materials=recs(window.__DATA__.materials);
+    $("#loading").classList.add("hide"); renderBoard(); return;
+  }
+  if(CONFIG.GET_URL.indexOf("__")===0){
+    DATA = buildDemo();
+    $("#loading").classList.add("hide");
+    renderBoard();
+    toast("Demo-Modus – noch nicht mit Make verbunden");
+    return;
+  }
+  try{
+    const r=await fetch(CONFIG.GET_URL,{cache:"no-store"});
+    const d=await r.json();
+    DATA.sites = recs(d.sites!==undefined?d.sites:d.baustellen);
+    DATA.materials = recs(d.materials!==undefined?d.materials:d.material);
+    $("#loading").classList.add("hide");
+    renderBoard();
+  }catch(e){
+    $("#loading").classList.add("hide");
+    showErr("Daten konnten nicht geladen werden.\n"+(e.message||e));
+  }
+}
+function showErr(msg){
+  const b=$("#errbox"); b.classList.remove("hide");
+  b.innerHTML='<div><div style="font-size:30px;margin-bottom:8px">⚠️</div><div style="white-space:pre-line;margin-bottom:14px">'+msg+'</div><button class="btn sec" style="max-width:200px" onclick="load()">Erneut versuchen</button></div>';
+}
+$("#reloadBtn").onclick=load;
+
+/* ---------- Board ---------- */
+function siteMaterials(siteId){
+  return DATA.materials.filter(m=>{
+    const link=fv(m,F.mSite,[]); const ids=Array.isArray(link)?link.map(x=>x&&x.id?x.id:x):[link];
+    return ids.indexOf(siteId)>=0;
+  });
+}
+function divInfo(m){
+  const out=fv(m,F.mOut,""), inb=fv(m,F.mIn,""), ben=fv(m,F.mBen,"");
+  if((out===""||out===null)&&(inb===""||inb===null)) return {text:"—",cls:"neutral"};
+  const d=(Number(out)||0)-(Number(inb)||0);
+  const ok=ben!==""&&ben!==null&&d===Number(ben);
+  return {text:d,cls:ok?"ok":"bad"};
+}
+function stats(siteId){
+  let rel=0,packed=0,dev=0;
+  siteMaterials(siteId).forEach(m=>{
+    const ben=fv(m,F.mBen,""),out=fv(m,F.mOut,"");
+    const relevant=(ben!==""&&ben>0)||(out!==""&&out>0);
+    if(relevant){rel++; if(fv(m,F.mGepackt,false))packed++;}
+    if(divInfo(m).cls==="bad")dev++;
+  });
+  return {rel,packed,dev};
+}
+function renderBoard(){
+  $("#hTitle").textContent="Zentrale";
+  const b=$("#board"); b.classList.remove("hide"); $("#detail").classList.add("hide");
+  let html='<div class="page-h"><h2>Zentrale</h2><span class="sub">'+DATA.sites.length+' Baustellen</span></div>';
+  STATUS.forEach(([label,color])=>{
+    const list=DATA.sites.filter(s=>fv(s,F.siteStatus)===label);
+    if(!list.length) return;
+    html+='<div class="col-h"><span class="dot" style="background:'+color+'"></span>'+label+'<span class="cnt">'+list.length+'</span></div>';
+    list.forEach(s=>html+=cardHtml(s));
+  });
+  const noStatus=DATA.sites.filter(s=>!STATUS.some(([l])=>l===fv(s,F.siteStatus)));
+  if(noStatus.length){ html+='<div class="col-h"><span class="dot" style="background:#cbd5e1"></span>Ohne Status<span class="cnt">'+noStatus.length+'</span></div>'; noStatus.forEach(s=>html+=cardHtml(s)); }
+  if(!DATA.sites.length) html+='<div class="center">Noch keine Baustellen.</div>';
+  b.innerHTML=html;
+  b.querySelectorAll("[data-site]").forEach(el=>el.onclick=()=>openDetail(el.dataset.site));
+}
+function cardHtml(s){
+  const st=stats(s.id); const pct=st.rel?Math.round(st.packed/st.rel*100):0;
+  let chips='';
+  if(fv(s,F.sitePlan,[]).length) chips+='<span class="chip plan">Plan ✓</span>';
+  if(st.dev>0) chips+='<span class="chip bad">'+st.dev+' Abw.</span>';
+  if(st.rel>0) chips+='<span class="chip pk">'+st.packed+'/'+st.rel+' gepackt</span>';
+  return '<div class="card" data-site="'+s.id+'"><div class="main"><h3>'+esc(fv(s,F.siteName,"(ohne Name)"))+'</h3><div class="addr">'+esc(fv(s,F.siteAddr,""))+'</div>'+(chips?'<div class="chips">'+chips+'</div>':'')+(st.rel?'<div class="prog" style="padding:0;border:0;box-shadow:none;margin:10px 0 0"><div class="bar"><i style="width:'+pct+'%"></i></div></div>':'')+'</div><span class="chev"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></span></div>';
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ---------- Detail ---------- */
+function openDetail(siteId){
+  openId=siteId; window.scrollTo(0,0);
+  $("#board").classList.add("hide");
+  const d=$("#detail"); d.classList.remove("hide");
+  const s=DATA.sites.find(x=>x.id===siteId); if(!s){ renderBoard(); return; }
+  $("#hTitle").textContent=fv(s,F.siteName,"Baustelle");
+  const mats=siteMaterials(siteId);
+  const plan=fv(s,F.sitePlan,[]); const planUrl=plan[0]&&plan[0].url;
+  const st=stats(siteId); const pct=st.rel?Math.round(st.packed/st.rel*100):0;
+
+  let planRow='';
+  if(planUrl){
+    planRow='<div class="plan-row"><a href="'+planUrl+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Belegungsplan</a>'
+      +'<button class="wa" onclick="shareWa(\''+encodeURIComponent(planUrl)+'\',\''+esc(fv(s,F.siteName,"")).replace(/\'/g,"")+'\')"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.1.1-1.8-.1-2.9-1.1-4.8-4-5-4.2-.1-.2-1.2-1.6-1.2-3s.8-2.1 1-2.4c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6c-.2.2-.3.4-.1.7.9 1.5 1.8 2 3 2.6.2.1.4.1.6-.1l.7-.9c.2-.2.4-.2.6-.1l1.9 1c.3.1.4.2.5.3.1.2.1.7-.1 1.3Z"/></svg>Teilen</button></div>';
+  } else {
+    planRow='<div class="plan-row"><div style="flex:1;color:var(--muted);font-size:13px;text-align:center;padding:12px;border:1px dashed var(--line);border-radius:12px">Noch kein Belegungsplan</div></div>';
+  }
+
+  const rows=mats.map(m=>materialHtml(m)).join("");
+  d.innerHTML=
+    '<button class="back" onclick="renderBoard()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>Zentrale</button>'
+    +'<div class="d-head"><h2>'+esc(fv(s,F.siteName,"Baustelle"))+'</h2><div class="addr">'+esc(fv(s,F.siteAddr,""))+(fv(s,F.siteDate)?' · '+esc(fv(s,F.siteDate)):'')+'</div></div>'
+    +planRow
+    +'<div class="prog"><div class="top"><span>Gepackt</span><span><b>'+st.packed+'</b>/'+st.rel+(st.dev>0?' · <span style="color:var(--danger)">'+st.dev+' Abweichung</span>':'')+'</span></div><div class="bar"><i style="width:'+pct+'%"></i></div></div>'
+    +'<div class="legend"><span><i class="sw" style="background:var(--accent-l);border:1px solid #86efac"></i> Div = Benötigt</span><span><i class="sw" style="background:var(--danger-l);border:1px solid #fca5a5"></i> Abweichung</span></div>'
+    +(rows||'<div class="center">Keine Materialzeilen.</div>');
+  bindMaterialInputs();
+}
+function materialHtml(m){
+  const ben=fv(m,F.mBen,""),out=fv(m,F.mOut,""),inb=fv(m,F.mIn,""),gep=!!fv(m,F.mGepackt,false);
+  const d=divInfo(m);
+  const relevant=(ben!==""&&ben>0)||(out!==""&&out>0);
+  const sug=(ben!==""&&ben>0)?(Number(ben)+Math.max(2,Math.round(Number(ben)*0.15))):"";
+  return '<div class="m '+(relevant?'':'off')+'" data-id="'+m.id+'">'
+    +'<div class="mtop"><div class="name">'+esc(fv(m,F.mArtikel,"Artikel"))+'</div><input class="pk" type="checkbox" data-f="Gepackt" '+(gep?'checked':'')+'></div>'
+    +'<div class="fields">'
+    +'<div class="fld"><label>Benötigt</label><div class="val">'+(ben===""?"–":ben)+'</div></div>'
+    +'<div class="fld"><label>Outbound</label><input type="number" inputmode="numeric" min="0" data-f="Outbound" value="'+(out===""?"":out)+'" placeholder="'+(sug?"≈"+sug:"")+'"></div>'
+    +'<div class="fld"><label>Inbound</label><input type="number" inputmode="numeric" min="0" data-f="Inbound" value="'+(inb===""?"":inb)+'" placeholder="–"></div>'
+    +'<div class="fld"><label>Div.</label><span class="div-badge '+d.cls+'" data-div>'+d.text+'</span></div>'
+    +'</div></div>';
+}
+function bindMaterialInputs(){
+  $("#detail").querySelectorAll(".m").forEach(row=>{
+    const id=row.dataset.id;
+    row.querySelectorAll("input").forEach(inp=>{
+      const ev=inp.type==="checkbox"?"change":"input";
+      inp.addEventListener(ev,()=>{
+        const m=DATA.materials.find(x=>x.id===id); if(!m)return; const f=m.fields||(m.fields={});
+        if(inp.dataset.f==="Gepackt") f.Gepackt=inp.checked;
+        else f[inp.dataset.f]= inp.value===""?"":Number(inp.value);
+        // Div-Badge live aktualisieren
+        const d=divInfo(m); const badge=row.querySelector("[data-div]"); badge.className="div-badge "+d.cls; badge.textContent=d.text;
+        queueSave(id);
+      });
+    });
+  });
+}
+
+/* ---------- Speichern (debounced) ---------- */
+const saveTimers={};
+function queueSave(id){
+  saveState("busy");
+  clearTimeout(saveTimers[id]);
+  saveTimers[id]=setTimeout(()=>doSave(id),700);
+}
+function beacon(u){ const f=document.createElement("iframe"); f.style.cssText="display:none"; f.src=u; document.body.appendChild(f); setTimeout(()=>{if(f.parentNode)f.parentNode.removeChild(f);},8000); }
+function doSave(id){
+  const m=DATA.materials.find(x=>x.id===id); if(!m)return; const f=m.fields||{};
+  const q="?id="+encodeURIComponent(id)
+    +"&outbound="+(f.Outbound===""||f.Outbound==null?"":Number(f.Outbound))
+    +"&inbound="+(f.Inbound===""||f.Inbound==null?"":Number(f.Inbound))
+    +"&gepackt="+(f.Gepackt?"true":"false");
+  if(CONFIG.SAVE_URL.indexOf("__")===0){ saveState("ok"); return; } // Demo ohne Backend
+  try{ beacon(CONFIG.SAVE_URL+q); saveState("ok"); }catch(e){ saveState(); toast("Nicht gespeichert",true); }
+}
+
+/* ---------- Teilen ---------- */
+function shareWa(url,name){
+  const txt="Belegungsplan"+(name?" für "+name:"")+":\n"+decodeURIComponent(url);
+  window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank");
+}
+
+/* Auto-load, falls schon entsperrt */
+if(sessionStorage.getItem("bz_ok")==="1") load();
+</script>
+</body>
+</html>
