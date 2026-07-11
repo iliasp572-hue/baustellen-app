@@ -34,6 +34,12 @@
   .top-in{max-width:1200px;margin:0 auto;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.2px}
   .brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#0284c7,#16a34a);display:grid;place-items:center;color:#fff;flex:none}
+  .brand .logo-img{height:26px;width:auto;display:block;flex:none}
+  .brand .appdiv{padding-left:11px;margin-left:1px;border-left:1px solid var(--line);font-size:15px}
+  .gate-logo-img{height:30px;width:auto;margin:0 auto 16px;display:block}
+  .card.done{opacity:.62}
+  .emp-sep{grid-column:1/-1;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 2px}
+  .emp-sep::before,.emp-sep::after{content:"";flex:1;height:1px;background:#d7dee7}
   .spacer{flex:1}
   .badge-role{font-size:12px;font-weight:800;padding:5px 11px;border-radius:999px;letter-spacing:.3px}
   .badge-role.adm{background:#ede9fe;color:#6d28d9}
@@ -168,7 +174,8 @@
 <!-- Login-Gate -->
 <div id="gate" class="gate">
   <div class="gate-card">
-    <div class="glogo"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/></svg></div>
+    <img class="gate-logo-img" src="https://www.syrink.de/cdn/shop/files/Asset_4.png?width=320" alt="Syrink Solar" onerror="this.style.display='none';document.getElementById('gateFallback').style.display='grid'">
+    <div class="glogo" id="gateFallback" style="display:none"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/></svg></div>
     <h1>Baustellen-Zentrale</h1>
     <p>Bitte Zugangscode eingeben</p>
     <input id="codeIn" class="code-in" type="tel" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off">
@@ -182,8 +189,9 @@
   <header class="top">
     <div class="top-in">
       <div class="brand">
-        <span class="logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/></svg></span>
-        <span>Baustellen<span class="full">-Zentrale</span></span>
+        <img class="logo-img" src="https://www.syrink.de/cdn/shop/files/Asset_4.png?width=260" alt="Syrink Solar" onerror="this.style.display='none';document.getElementById('brandFallback').style.display='grid'">
+        <span class="logo" id="brandFallback" style="display:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/></svg></span>
+        <span class="appdiv">Baustellen<span class="full">-Zentrale</span></span>
       </div>
       <div class="spacer"></div>
       <span class="badge-role mit" id="accessBadge">Mitarbeiter</span>
@@ -347,12 +355,18 @@ function renderBoard(){
     board.appendChild(col);
   });
 }
+function fullyPacked(c){ const s=stats(c); return s.rel>0 && s.packed===s.rel; }
 function renderEmployee(){
   const board=$("#board"); board.className=""; board.innerHTML="";
-  const list=state.customers.slice().sort((a,b)=>{ const sa=stats(a),sb=stats(b); const da=sa.rel&&sa.packed===sa.rel?1:0, db=sb.rel&&sb.packed===sb.rel?1:0; return da-db; });
-  if(!list.length){ board.innerHTML='<div class="empty"><div class="big">📭</div>Aktuell ist nichts für dich freigegeben.<br><span style="font-size:13px">Sobald dein Chef eine Baustelle freigibt, erscheint sie hier.</span></div>'; return; }
+  const all=state.customers.slice();
+  if(!all.length){ board.innerHTML='<div class="empty"><div class="big">📭</div>Aktuell ist nichts für dich freigegeben.<br><span style="font-size:13px">Sobald dein Chef eine Baustelle freigibt, erscheint sie hier.</span></div>'; return; }
+  const todo=all.filter(c=>!fullyPacked(c)), done=all.filter(fullyPacked);
   const grid=document.createElement("div"); grid.className="emp-grid";
-  list.forEach(c=>grid.appendChild(makeCard(c)));
+  todo.forEach(c=>grid.appendChild(makeCard(c)));
+  if(done.length){
+    const sep=document.createElement("div"); sep.className="emp-sep"; sep.textContent="Fertig gepackt"; grid.appendChild(sep);
+    done.forEach(c=>{ const card=makeCard(c); card.classList.add("done"); grid.appendChild(card); });
+  }
   board.appendChild(grid);
 }
 
