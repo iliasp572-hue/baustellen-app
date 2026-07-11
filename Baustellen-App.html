@@ -57,6 +57,15 @@
   .page-h{display:flex;align-items:baseline;gap:12px;margin:22px 0 6px;flex-wrap:wrap}
   .page-h h1{font-size:22px;margin:0;letter-spacing:-.4px}
   .page-h .sub{color:var(--muted);font-size:14px}
+  .search{margin-left:auto;align-self:center;position:relative;display:flex;align-items:center}
+  .search-ic{position:absolute;left:11px;width:16px;height:16px;color:var(--muted);pointer-events:none}
+  .search input{padding:9px 30px 9px 34px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;width:230px;background:var(--panel);color:var(--ink);-webkit-appearance:none}
+  .search input:focus{outline:none;border-color:var(--primary)}
+  .search input::-webkit-search-cancel-button{display:none}
+  .search-clear{position:absolute;right:6px;border:0;background:transparent;color:var(--muted);font-size:13px;cursor:pointer;padding:4px 6px;border-radius:6px;line-height:1}
+  .search-clear:hover{background:#f1f5f9}
+  .res-head{color:var(--muted);font-size:13px;font-weight:600;margin:16px 0 0}
+  @media(max-width:560px){ .search{width:100%;margin:10px 0 0} .search input{width:100%} }
   .btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:9px 14px;border-radius:10px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:7px}
   .btn:hover{border-color:#cbd5e1}
   .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
@@ -212,6 +221,11 @@
       <div class="page-h">
         <h1 id="pageTitle">Zentrale</h1>
         <span class="sub" id="pageSub">Pro gewonnenem Kunden eine Karte</span>
+        <div class="search">
+          <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input id="searchIn" type="search" placeholder="Kunde suchen …" autocomplete="off">
+          <button id="searchClear" class="search-clear hide" title="Löschen">✕</button>
+        </div>
       </div>
       <div id="board"></div>
     </section>
@@ -264,7 +278,8 @@ function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;",
 function toast(t,bad){ const el=$("#toast"); el.textContent=t; el.className="toast show"+(bad?" bad":""); clearTimeout(el._t); el._t=setTimeout(()=>el.className="toast",2200); }
 function beacon(u){ const f=document.createElement("iframe"); f.style.cssText="display:none"; f.src=u; document.body.appendChild(f); setTimeout(()=>{if(f.parentNode)f.parentNode.removeChild(f);},8000); }
 
-let state={ access:null, role:"mitarbeiter", openId:null, customers:[] };
+let state={ access:null, role:"mitarbeiter", openId:null, customers:[], search:"" };
+function matchesQuery(c,q){ q=(q||"").trim().toLowerCase(); if(!q) return true; return (c.name||"").toLowerCase().includes(q) || (c.address||"").toLowerCase().includes(q); }
 
 /* ===== Daten laden ===== */
 function buildCustomers(sites,materials){
@@ -343,7 +358,21 @@ function makeCard(c){
 }
 
 /* ===== Dashboard ===== */
-function renderDashboard(){ if(state.access==="admin") renderBoard(); else renderEmployee(); }
+function renderDashboard(){
+  const q=(state.search||"").trim();
+  if(q){ renderResults(q); return; }
+  if(state.access==="admin") renderBoard(); else renderEmployee();
+}
+function renderResults(q){
+  const board=$("#board"); board.className=""; board.innerHTML="";
+  const list=state.customers.filter(c=>matchesQuery(c,q));
+  const head=document.createElement("div"); head.className="res-head"; head.textContent=list.length+" Treffer für „"+q+"“";
+  board.appendChild(head);
+  if(!list.length){ const e=document.createElement("div"); e.className="empty"; e.innerHTML='<div class="big">🔍</div>Kein Kunde gefunden.'; board.appendChild(e); return; }
+  const grid=document.createElement("div"); grid.className="emp-grid"; grid.style.marginTop="12px";
+  list.forEach(c=>grid.appendChild(makeCard(c)));
+  board.appendChild(grid);
+}
 
 function renderBoard(){
   const board=$("#board"); board.className="board"; board.innerHTML="";
@@ -483,6 +512,8 @@ $("#role").querySelectorAll("button").forEach(b=>{ b.onclick=()=>{ state.role=b.
 $("#backBtn").onclick=()=>{ $("#detail").style.display="none"; $("#dashboard").classList.remove("hide"); renderDashboard(); };
 $("#reloadBtn").onclick=load;
 $("#logoutBtn").onclick=()=>{ sessionStorage.removeItem("bz_access"); location.reload(); };
+$("#searchIn").addEventListener("input",e=>{ state.search=e.target.value; $("#searchClear").classList.toggle("hide",!e.target.value); if($("#detail").style.display!=="block") renderDashboard(); });
+$("#searchClear").onclick=()=>{ state.search=""; $("#searchIn").value=""; $("#searchClear").classList.add("hide"); renderDashboard(); };
 
 /* ===== Access-UI ===== */
 function applyAccessUI(){
