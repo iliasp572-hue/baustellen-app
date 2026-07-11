@@ -31,10 +31,13 @@
 
   /* Header */
   header.top{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:var(--shadow)}
-  .top-in{max-width:1200px;margin:0 auto;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .top-in{max-width:1200px;margin:0 auto;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.2px}
   .brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#0284c7,#16a34a);display:grid;place-items:center;color:#fff;flex:none}
   .spacer{flex:1}
+  .badge-role{font-size:12px;font-weight:800;padding:5px 11px;border-radius:999px;letter-spacing:.3px}
+  .badge-role.adm{background:#ede9fe;color:#6d28d9}
+  .badge-role.mit{background:var(--accent-l);color:#166534}
   .iconbtn{border:1px solid var(--line);background:var(--panel);border-radius:10px;width:38px;height:38px;display:grid;place-items:center;color:var(--muted);flex:none}
   .iconbtn:active{background:#f1f5f9}
   .iconbtn svg{width:18px;height:18px}
@@ -45,7 +48,7 @@
   .role button.active[data-r="mitarbeiter"]{color:var(--accent)}
 
   /* Board */
-  .page-h{display:flex;align-items:center;gap:12px;margin:22px 0 6px;flex-wrap:wrap}
+  .page-h{display:flex;align-items:baseline;gap:12px;margin:22px 0 6px;flex-wrap:wrap}
   .page-h h1{font-size:22px;margin:0;letter-spacing:-.4px}
   .page-h .sub{color:var(--muted);font-size:14px}
   .btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:9px 14px;border-radius:10px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:7px}
@@ -60,7 +63,9 @@
   .col-h{display:flex;align-items:center;gap:8px;padding:4px 6px 10px;font-weight:700;font-size:13px;color:#475569}
   .col-h .dot{width:9px;height:9px;border-radius:50%}
   .col-h .cnt{margin-left:auto;background:#fff;border:1px solid var(--line);color:var(--muted);font-size:12px;border-radius:999px;padding:1px 8px;font-weight:700}
+  .emp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:16px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(15,23,42,.05);transition:transform .08s,box-shadow .12s}
+  .emp-grid .card{margin-bottom:0}
   .card:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
   .card h3{margin:0 0 3px;font-size:15px;letter-spacing:-.2px}
   .card .addr{color:var(--muted);font-size:12.5px;margin-bottom:9px;line-height:1.35}
@@ -68,12 +73,16 @@
   .chip{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:5px}
   .chip.crm{background:#ede9fe;color:#6d28d9}
   .chip.plan{background:#e0f2fe;color:#075985}
+  .chip.rel{background:#dcfce7;color:#166534}
   .chip.ok{background:var(--accent-l);color:#166534}
   .chip.bad{background:var(--danger-l);color:#991b1b}
   .chip.pack{background:#f1f5f9;color:#475569}
   .chip svg{width:12px;height:12px}
   .card .bar{height:6px;background:#eef2f6;border-radius:4px;margin-top:10px;overflow:hidden}
   .card .bar > i{display:block;height:100%;background:var(--accent)}
+  .freigabe-btn{margin-top:10px;width:100%;border:1px solid var(--line);background:#f8fafc;color:var(--muted);font-weight:700;font-size:12.5px;padding:7px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:6px}
+  .freigabe-btn:hover{border-color:#a78bfa;color:#6d28d9}
+  .freigabe-btn.on{background:var(--accent-l);border-color:#86efac;color:#166534}
 
   /* Detail */
   .detail{display:none}
@@ -84,6 +93,9 @@
   .d-head .addr{color:var(--muted);font-size:14px;margin-top:3px}
   .d-head .status-sel{margin-left:auto;display:flex;align-items:center;gap:8px}
   select{font-family:inherit;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .fr-toggle{margin-top:14px;border:1px solid #a78bfa;background:#f5f3ff;color:#6d28d9;font-weight:700;font-size:14px;padding:10px 16px;border-radius:11px;display:inline-flex;align-items:center;gap:8px;width:100%;justify-content:center}
+  .fr-toggle.on{background:var(--accent-l);border-color:#86efac;color:#166534}
+  .fr-toggle svg{width:17px;height:17px}
   .grid2{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;margin-top:14px}
   .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
   .box h4{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
@@ -133,6 +145,8 @@
   .pk:disabled{cursor:not-allowed;opacity:.5}
 
   .hint{font-size:12.5px;color:var(--muted);padding:12px 16px;background:#f8fafc;border-top:1px solid var(--line)}
+  .empty{text-align:center;color:var(--muted);padding:50px 20px;font-size:15px}
+  .empty .big{font-size:34px;margin-bottom:10px}
 
   .center{min-height:55dvh;display:grid;place-items:center;text-align:center;color:var(--muted);padding:24px}
   .spin{width:34px;height:34px;border:3px solid #cbd5e1;border-top-color:var(--primary);border-radius:50%;animation:s .8s linear infinite;margin:0 auto 12px}
@@ -151,14 +165,14 @@
 </head>
 <body>
 
-<!-- Passcode-Gate -->
+<!-- Login-Gate -->
 <div id="gate" class="gate">
   <div class="gate-card">
     <div class="glogo"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/></svg></div>
     <h1>Baustellen-Zentrale</h1>
     <p>Bitte Zugangscode eingeben</p>
     <input id="codeIn" class="code-in" type="tel" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off">
-    <button class="gate-btn" id="codeBtn">Öffnen</button>
+    <button class="gate-btn" id="codeBtn">Anmelden</button>
     <div class="gate-err" id="codeErr"></div>
   </div>
 </div>
@@ -172,11 +186,13 @@
         <span>Baustellen<span class="full">-Zentrale</span></span>
       </div>
       <div class="spacer"></div>
-      <button class="iconbtn" id="reloadBtn" title="Neu laden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg></button>
-      <div class="role" id="role">
+      <span class="badge-role mit" id="accessBadge">Mitarbeiter</span>
+      <div class="role hide" id="role">
         <button data-r="buero">Büro</button>
         <button data-r="mitarbeiter" class="active">Mitarbeiter</button>
       </div>
+      <button class="iconbtn" id="reloadBtn" title="Neu laden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg></button>
+      <button class="iconbtn" id="logoutBtn" title="Abmelden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
     </div>
   </header>
 
@@ -186,14 +202,14 @@
 
     <section id="dashboard" class="hide">
       <div class="page-h">
-        <h1>Zentrale</h1>
-        <span class="sub">Pro gewonnenem Kunden eine Karte</span>
+        <h1 id="pageTitle">Zentrale</h1>
+        <span class="sub" id="pageSub">Pro gewonnenem Kunden eine Karte</span>
       </div>
-      <div class="board" id="board"></div>
+      <div id="board"></div>
     </section>
 
     <section id="detail" class="detail">
-      <button class="back" id="backBtn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>Zurück zur Zentrale</button>
+      <button class="back" id="backBtn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>Zurück</button>
       <div id="detailBody"></div>
     </section>
   </div>
@@ -211,11 +227,12 @@ const CONFIG = {
   GET_URL:  "https://hook.eu2.make.com/9gj1j5y1ep3zfgyww8mj60pon4lbuhfd",
   SAVE_URL: "https://hook.eu2.make.com/uf4gr5b22a0x9sdpdp4nv5lpbjp475qn",
   PLAN_URL: "https://hook.eu2.make.com/rh4trtwbt6iti8efl5tseygomjs7j917",
-  CODE:     "2468"
+  CODE_ADMIN: "7894",   // voller Zugriff
+  CODE_MIT:   "1234"    // nur freigegebene Kunden
 };
 const F = {
   siteName:["Name"], siteAddr:["Adresse"], siteStatus:["Status"], siteDate:["Termin"],
-  sitePlan:["Belegungsplan"], siteDeal:["HubSpot Deal ID"],
+  sitePlan:["Belegungsplan"], siteDeal:["HubSpot Deal ID"], siteFrei:["Freigabe Mitarbeiter"],
   mArtikel:["Artikel"], mSite:["Baustelle"], mBen:["Benoetigt","Benötigt"],
   mOut:["Outbound"], mIn:["Inbound"], mGepackt:["Gepackt"]
 };
@@ -239,7 +256,7 @@ function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;",
 function toast(t,bad){ const el=$("#toast"); el.textContent=t; el.className="toast show"+(bad?" bad":""); clearTimeout(el._t); el._t=setTimeout(()=>el.className="toast",2200); }
 function beacon(u){ const f=document.createElement("iframe"); f.style.cssText="display:none"; f.src=u; document.body.appendChild(f); setTimeout(()=>{if(f.parentNode)f.parentNode.removeChild(f);},8000); }
 
-let state={ role:"mitarbeiter", openId:null, customers:[] };
+let state={ access:null, role:"mitarbeiter", openId:null, customers:[] };
 
 /* ===== Daten laden ===== */
 function buildCustomers(sites,materials){
@@ -251,14 +268,16 @@ function buildCustomers(sites,materials){
     const bp=fv(s,F.sitePlan,[]);
     const plan=bp.length?{ name:bp[0].filename||"Belegungsplan", url:bp[0].url||null }:null;
     let st=fv(s,F.siteStatus,""); if(!KNOWN.has(st)) st="";
-    return { id:s.id, name:fv(s,F.siteName,"(ohne Name)"), address:fv(s,F.siteAddr,""), date:fv(s,F.siteDate,""), status:st, crm:!!fv(s,F.siteDeal,""), plan, materials:mats };
+    return { id:s.id, name:fv(s,F.siteName,"(ohne Name)"), address:fv(s,F.siteAddr,""), date:fv(s,F.siteDate,""), status:st, crm:!!fv(s,F.siteDeal,""), released:!!fv(s,F.siteFrei,false), plan, materials:mats };
   });
 }
 async function fetchAll(){
   if(window.__DATA__){ const d=window.__DATA__; return {sites:recs(d.sites), materials:recs(d.materials)}; }
+  const scoped = state.access==="mit";
   let sites=null, materials=[], off="";
-  for(let i=0;i<60;i++){                       // Material kommt seitenweise (100/Seite) – bis alles geladen ist
-    const url=CONFIG.GET_URL+(off?"?offset="+encodeURIComponent(off):"");
+  for(let i=0;i<60;i++){
+    const p=[]; if(scoped)p.push("scope=mit"); if(off)p.push("offset="+encodeURIComponent(off));
+    const url=CONFIG.GET_URL+(p.length?"?"+p.join("&"):"");
     const r=await fetch(url,{cache:"no-store"});
     const d=await r.json();
     if(!sites) sites=recs(d.sites);
@@ -274,7 +293,7 @@ async function load(){
   try{
     const {sites,materials}=await fetchAll();
     state.customers=buildCustomers(sites,materials);
-    $("#loading").classList.add("hide"); $("#dashboard").classList.remove("hide"); renderBoard();
+    $("#loading").classList.add("hide"); $("#dashboard").classList.remove("hide"); renderDashboard();
   }catch(e){
     $("#loading").classList.add("hide");
     $("#errbox").classList.remove("hide");
@@ -293,46 +312,66 @@ function divInfo(m){
 function relevant(m){ return (m.benoetigt!==""&&m.benoetigt>0)||(m.outbound!==""&&m.outbound>0); }
 function stats(c){ let rel=0,packed=0,dev=0; c.materials.forEach(m=>{ if(relevant(m)){rel++; if(m.gepackt)packed++;} if(divInfo(m).cls==="bad")dev++; }); return {rel,packed,dev}; }
 
-/* ===== Board ===== */
+/* ===== Karten ===== */
+function makeCard(c){
+  const s=stats(c); const pct=s.rel?Math.round(s.packed/s.rel*100):0;
+  let chips="";
+  if(state.access==="admin"&&c.crm) chips+='<span class="chip crm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>aus CRM</span>';
+  if(c.plan) chips+='<span class="chip plan">Plan ✓</span>';
+  if(state.access==="admin"&&c.released) chips+='<span class="chip rel">freigegeben</span>';
+  if(s.dev>0) chips+='<span class="chip bad">'+s.dev+' Abw.</span>';
+  else if(s.rel>0&&s.packed===s.rel) chips+='<span class="chip ok">stimmt</span>';
+  if(s.rel>0) chips+='<span class="chip pack">'+s.packed+'/'+s.rel+' gepackt</span>';
+  const card=document.createElement("div"); card.className="card";
+  card.innerHTML='<h3>'+esc(c.name)+'</h3><div class="addr">'+esc(c.address)+'</div><div class="chips">'+chips+'</div>'+(s.rel?'<div class="bar"><i style="width:'+pct+'%"></i></div>':'');
+  if(state.access==="admin"){
+    const fb=document.createElement("button"); fb.className="freigabe-btn"+(c.released?" on":"");
+    fb.innerHTML=(c.released?'✓ Freigegeben':'Für Mitarbeiter freigeben');
+    fb.onclick=(e)=>{ e.stopPropagation(); toggleFreigabe(c); };
+    card.appendChild(fb);
+  }
+  card.onclick=()=>openDetail(c.id);
+  return card;
+}
+
+/* ===== Dashboard ===== */
+function renderDashboard(){ if(state.access==="admin") renderBoard(); else renderEmployee(); }
+
 function renderBoard(){
-  const board=$("#board"); board.innerHTML="";
+  const board=$("#board"); board.className="board"; board.innerHTML="";
   COLUMNS.forEach(([key,label,color])=>{
     const list=state.customers.filter(c=>c.status===key);
     const col=document.createElement("div"); col.className="col";
     col.innerHTML='<div class="col-h"><span class="dot" style="background:'+color+'"></span>'+label+'<span class="cnt">'+list.length+'</span></div>';
-    list.forEach(c=>{
-      const s=stats(c); const card=document.createElement("div"); card.className="card";
-      let chips="";
-      if(c.crm) chips+='<span class="chip crm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>aus CRM</span>';
-      if(c.plan) chips+='<span class="chip plan">Plan ✓</span>';
-      if(s.dev>0) chips+='<span class="chip bad">'+s.dev+' Abw.</span>';
-      else if(s.rel>0&&s.packed===s.rel) chips+='<span class="chip ok">stimmt</span>';
-      if(s.rel>0) chips+='<span class="chip pack">'+s.packed+'/'+s.rel+' gepackt</span>';
-      const pct=s.rel?Math.round(s.packed/s.rel*100):0;
-      card.innerHTML='<h3>'+esc(c.name)+'</h3><div class="addr">'+esc(c.address)+'</div><div class="chips">'+chips+'</div>'+(s.rel?'<div class="bar"><i style="width:'+pct+'%"></i></div>':'');
-      card.onclick=()=>openDetail(c.id);
-      col.appendChild(card);
-    });
+    list.forEach(c=>col.appendChild(makeCard(c)));
     board.appendChild(col);
   });
+}
+function renderEmployee(){
+  const board=$("#board"); board.className=""; board.innerHTML="";
+  const list=state.customers.slice().sort((a,b)=>{ const sa=stats(a),sb=stats(b); const da=sa.rel&&sa.packed===sa.rel?1:0, db=sb.rel&&sb.packed===sb.rel?1:0; return da-db; });
+  if(!list.length){ board.innerHTML='<div class="empty"><div class="big">📭</div>Aktuell ist nichts für dich freigegeben.<br><span style="font-size:13px">Sobald dein Chef eine Baustelle freigibt, erscheint sie hier.</span></div>'; return; }
+  const grid=document.createElement("div"); grid.className="emp-grid";
+  list.forEach(c=>grid.appendChild(makeCard(c)));
+  board.appendChild(grid);
 }
 
 /* ===== Detail ===== */
 function openDetail(id){ state.openId=id; $("#dashboard").classList.add("hide"); $("#detail").style.display="block"; renderDetail(); window.scrollTo(0,0); }
 function renderDetail(){
   const c=state.customers.find(x=>x.id===state.openId); if(!c) return;
-  const isBuero=state.role==="buero";
+  const admin=state.access==="admin";
+  const isBuero=admin && state.role==="buero";
   const s=stats(c); const pct=s.rel?Math.round(s.packed/s.rel*100):0;
-  const planShare=CONFIG.PLAN_URL+"?b="+encodeURIComponent(c.id);
 
   let planHtml;
   if(c.plan){
     const thumb=c.plan.url?'<img src="'+c.plan.url+'" alt="">':'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
     planHtml='<div class="plan-file"><div class="thumb">'+thumb+'</div><div class="meta"><div class="n">'+esc(c.plan.name)+'</div><div class="s">Belegungsplan · für die Baustelle</div></div></div>'
-      +'<div class="plan-actions"><a class="btn" href="'+planShare+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Öffnen</a>'
+      +'<div class="plan-actions"><a class="btn" href="'+CONFIG.PLAN_URL+"?b="+encodeURIComponent(c.id)+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Öffnen</a>'
       +'<button class="btn green" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Teilen</button></div>';
   } else {
-    planHtml='<div class="drop"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div style="margin-top:8px">Noch kein Belegungsplan.<br><span style="font-size:12.5px">Im Büro (Airtable) beim Feld „Belegungsplan" hochladen.</span></div></div>';
+    planHtml='<div class="drop"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div style="margin-top:8px">Noch kein Belegungsplan.<br><span style="font-size:12.5px">'+(admin?'Im Büro (Airtable) beim Feld „Belegungsplan" hochladen.':'Frag im Büro nach dem Belegungsplan.')+'</span></div></div>';
   }
 
   const rows=c.materials.map((m,i)=>{
@@ -350,10 +389,13 @@ function renderDetail(){
   }).join("");
 
   const statusOpts=COLUMNS.filter(x=>x[0]).map(([k,l])=>'<option value="'+k+'" '+(c.status===k?"selected":"")+'>'+l+'</option>').join("")+'<option value="" '+(c.status===""?"selected":"")+'>Ohne Status</option>';
+  const statusCtrl = admin ? '<div class="status-sel"><span style="font-size:12.5px;color:var(--muted);font-weight:600">Status</span><select id="statusSel">'+statusOpts+'</select></div>' : '';
+  const freigabeCtrl = admin ? '<button class="fr-toggle'+(c.released?" on":"")+'" id="frToggle">'+(c.released
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>Für Mitarbeiter freigegeben — tippen zum Zurücknehmen'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 11l2 2 4-4"/><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Für Mitarbeiter freigeben')+'</button>' : '';
 
   $("#detailBody").innerHTML=
-    '<div class="d-head"><div class="row1"><div><h2>'+esc(c.name)+'</h2><div class="addr">'+esc(c.address)+(c.date?' · Termin: '+esc(c.date):'')+'</div></div>'
-    +'<div class="status-sel"><span style="font-size:12.5px;color:var(--muted);font-weight:600">Status</span><select id="statusSel" '+(isBuero?"":"disabled")+'>'+statusOpts+'</select></div></div></div>'
+    '<div class="d-head"><div class="row1"><div><h2>'+esc(c.name)+'</h2><div class="addr">'+esc(c.address)+(c.date?' · Termin: '+esc(c.date):'')+'</div></div>'+statusCtrl+'</div>'+freigabeCtrl+'</div>'
     +'<div class="grid2"><div class="box"><h4>Belegungsplan</h4>'+planHtml+'</div>'
     +'<div class="box"><h4>Übersicht</h4><div class="tiles">'
     +'<div class="tile"><div class="k">Gepackt</div><div class="v">'+s.packed+'<small>/'+s.rel+'</small></div><div class="prog"><i style="width:'+pct+'%"></i></div></div>'
@@ -367,6 +409,7 @@ function renderDetail(){
     +(isBuero?'Als Büro füllst du <b>Benötigt</b> aus und setzt den Status.':'Du füllst <b>Outbound</b> (Vorschlag grau), später <b>Inbound</b> aus und hakst <b>Gepackt</b> ab.')+'</div></div>';
 
   const ss=$("#statusSel"); if(ss) ss.onchange=e=>{ c.status=e.target.value; saveStatus(c); toast("Status gespeichert"); };
+  const fr=$("#frToggle"); if(fr) fr.onclick=()=>toggleFreigabe(c);
   $("#detailBody").querySelectorAll(".cell-in,.pk").forEach(inp=>{
     const ev=inp.type==="checkbox"?"change":"input";
     inp.addEventListener(ev,e=>{
@@ -393,7 +436,7 @@ const timers={};
 function q(v){ return v===""||v==null?"":v; }
 function saveMaterial(m,f){
   clearTimeout(timers[m.recId]);
-  const buero = f==="benoetigt";                 // Büro speichert nur Benötigt, Mitarbeiter nur Outbound/Inbound/Gepackt
+  const buero = f==="benoetigt";
   timers[m.recId]=setTimeout(()=>{
     const u = buero
       ? CONFIG.SAVE_URL+"?kind=matB&id="+encodeURIComponent(m.recId)+"&benoetigt="+q(m.benoetigt)
@@ -402,6 +445,12 @@ function saveMaterial(m,f){
   },600);
 }
 function saveStatus(c){ beacon(CONFIG.SAVE_URL+"?kind=site&id="+encodeURIComponent(c.id)+"&status="+encodeURIComponent(c.status)); }
+function toggleFreigabe(c){
+  c.released=!c.released;
+  beacon(CONFIG.SAVE_URL+"?kind=freigabe&id="+encodeURIComponent(c.id)+"&freigabe="+(c.released?"true":"false"));
+  toast(c.released?"Für Mitarbeiter freigegeben ✓":"Freigabe zurückgenommen");
+  if($("#detail").style.display==="block") renderDetail(); else renderDashboard();
+}
 
 /* ===== Teilen ===== */
 let shareCtx=null;
@@ -417,14 +466,37 @@ $("#sharePop").querySelectorAll("button").forEach(b=>{
 
 /* ===== Rolle / Navigation ===== */
 $("#role").querySelectorAll("button").forEach(b=>{ b.onclick=()=>{ state.role=b.dataset.r; $("#role").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b)); if($("#detail").style.display==="block") renderDetail(); }; });
-$("#backBtn").onclick=()=>{ $("#detail").style.display="none"; $("#dashboard").classList.remove("hide"); renderBoard(); };
+$("#backBtn").onclick=()=>{ $("#detail").style.display="none"; $("#dashboard").classList.remove("hide"); renderDashboard(); };
 $("#reloadBtn").onclick=load;
+$("#logoutBtn").onclick=()=>{ sessionStorage.removeItem("bz_access"); location.reload(); };
+
+/* ===== Access-UI ===== */
+function applyAccessUI(){
+  const admin=state.access==="admin";
+  $("#role").classList.toggle("hide",!admin);
+  $("#role").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.r===state.role));
+  const badge=$("#accessBadge"); badge.textContent=admin?"Admin":"Mitarbeiter"; badge.className="badge-role "+(admin?"adm":"mit");
+  $("#pageTitle").textContent=admin?"Zentrale":"Zu packen";
+  $("#pageSub").textContent=admin?"Pro gewonnenem Kunden eine Karte":"Von deinem Chef für die Baustelle freigegeben";
+}
 
 /* ===== Gate ===== */
-function unlock(){ const v=$("#codeIn").value.trim(); if(v===String(CONFIG.CODE)){ sessionStorage.setItem("bz_ok","1"); $("#gate").classList.add("hide"); $("#app").classList.remove("hide"); load(); } else { $("#codeErr").textContent="Falscher Code."; $("#codeIn").value=""; } }
+function startApp(access){
+  state.access=access; state.role = access==="admin" ? "buero" : "mitarbeiter";
+  sessionStorage.setItem("bz_access",access);
+  $("#gate").classList.add("hide"); $("#app").classList.remove("hide");
+  applyAccessUI(); load();
+}
+function unlock(){
+  const v=$("#codeIn").value.trim();
+  if(v===CONFIG.CODE_ADMIN){ startApp("admin"); }
+  else if(v===CONFIG.CODE_MIT){ startApp("mit"); }
+  else { $("#codeErr").textContent="Falscher Code."; $("#codeIn").value=""; }
+}
 $("#codeBtn").onclick=unlock;
 $("#codeIn").addEventListener("keydown",e=>{ if(e.key==="Enter") unlock(); });
-if(sessionStorage.getItem("bz_ok")==="1"){ $("#gate").classList.add("hide"); $("#app").classList.remove("hide"); load(); }
+const saved=sessionStorage.getItem("bz_access");
+if(saved==="admin"||saved==="mit") startApp(saved);
 </script>
 </body>
 </html>
