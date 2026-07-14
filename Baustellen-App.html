@@ -106,6 +106,8 @@
   .d-head .row1{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
   .d-head h2{margin:0;font-size:21px;letter-spacing:-.3px}
   .d-head .addr{color:var(--muted);font-size:14px;margin-top:3px}
+  .d-head .addr a{color:var(--primary-d);text-decoration:none;font-weight:600}
+  .d-head .addr a:hover{text-decoration:underline}
   .d-head .status-sel{margin-left:auto;display:flex;align-items:center;gap:8px}
   select{font-family:inherit;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink)}
   .fr-toggle{margin-top:14px;border:1px solid #a78bfa;background:#f5f3ff;color:#6d28d9;font-weight:700;font-size:14px;padding:10px 16px;border-radius:11px;display:inline-flex;align-items:center;gap:8px;width:100%;justify-content:center}
@@ -277,6 +279,7 @@ function buf(b){ return Math.max(2,Math.round(b*0.15)); }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function toast(t,bad){ const el=$("#toast"); el.textContent=t; el.className="toast show"+(bad?" bad":""); clearTimeout(el._t); el._t=setTimeout(()=>el.className="toast",2200); }
 function beacon(u){ const f=document.createElement("iframe"); f.style.cssText="display:none"; f.src=u; document.body.appendChild(f); setTimeout(()=>{if(f.parentNode)f.parentNode.removeChild(f);},8000); }
+function mapsUrl(addr){ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(addr); }
 
 let state={ access:null, role:"mitarbeiter", openId:null, customers:[], search:"" };
 function matchesQuery(c,q){ q=(q||"").trim().toLowerCase(); if(!q) return true; return (c.name||"").toLowerCase().includes(q) || (c.address||"").toLowerCase().includes(q); }
@@ -437,8 +440,11 @@ function renderDetail(){
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>Für Mitarbeiter freigegeben — tippen zum Zurücknehmen'
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 11l2 2 4-4"/><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Für Mitarbeiter freigeben')+'</button>' : '';
 
+  const addrHtml = c.address
+    ? '<a href="'+mapsUrl(c.address)+'" target="_blank" rel="noopener" title="In Google Maps öffnen">📍 '+esc(c.address)+'</a>'
+    : '';
   $("#detailBody").innerHTML=
-    '<div class="d-head"><div class="row1"><div><h2>'+esc(c.name)+'</h2><div class="addr">'+esc(c.address)+(c.date?' · Termin: '+esc(c.date):'')+'</div></div>'+statusCtrl+'</div>'+freigabeCtrl+'</div>'
+    '<div class="d-head"><div class="row1"><div><h2>'+esc(c.name)+'</h2><div class="addr">'+addrHtml+(c.date?(addrHtml?' · ':'')+'Termin: '+esc(c.date):'')+'</div></div>'+statusCtrl+'</div>'+freigabeCtrl+'</div>'
     +'<div class="grid2"><div class="box"><h4>Belegungsplan</h4>'+planHtml+'</div>'
     +'<div class="box"><h4>Übersicht</h4><div class="tiles">'
     +'<div class="tile"><div class="k">Gepackt</div><div class="v">'+s.packed+'<small>/'+s.rel+'</small></div><div class="prog"><i style="width:'+pct+'%"></i></div></div>'
@@ -497,12 +503,23 @@ function toggleFreigabe(c){
 
 /* ===== Teilen ===== */
 let shareCtx=null;
+function shareText(c){
+  const link=CONFIG.PLAN_URL+"?b="+encodeURIComponent(c.id);
+  let txt="Belegungsplan für "+c.name;
+  if(c.address){
+    txt+="\n📍 Adresse: "+c.address;
+    txt+="\n🗺️ Navigation: "+mapsUrl(c.address);
+  }
+  if(c.date) txt+="\n📅 Termin: "+c.date;
+  txt+="\n\n📄 Belegungsplan: "+link;
+  return txt;
+}
 function openShare(e,c){ shareCtx=c; const p=$("#sharePop"); const r=e.currentTarget.getBoundingClientRect(); p.style.display="block"; p.style.left=Math.min(r.left,window.innerWidth-210)+"px"; p.style.top=(r.bottom+window.scrollY+6)+"px"; }
 document.addEventListener("click",e=>{ const p=$("#sharePop"); if(p.style.display==="block"&&!p.contains(e.target)&&!e.target.closest("#shareBtn"))p.style.display="none"; });
 $("#sharePop").querySelectorAll("button").forEach(b=>{
-  b.onclick=()=>{ const c=shareCtx; const link=CONFIG.PLAN_URL+"?b="+encodeURIComponent(c.id);
-    if(b.dataset.a==="wa"){ const txt="Belegungsplan für "+c.name+(c.address?" ("+c.address+")":"")+":\n"+link; window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank"); }
-    else { navigator.clipboard&&navigator.clipboard.writeText(link); toast("Link kopiert"); }
+  b.onclick=()=>{ const c=shareCtx; const txt=shareText(c);
+    if(b.dataset.a==="wa"){ window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank"); }
+    else { navigator.clipboard&&navigator.clipboard.writeText(txt); toast("Plan + Adresse kopiert"); }
     $("#sharePop").style.display="none";
   };
 });
