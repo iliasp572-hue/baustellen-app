@@ -433,7 +433,7 @@ function typName(t){ return t&&t.name?t.name:(t||""); }
 function entriesFor(month, mitId){
   return ENTRIES.filter(e=>(e.fields.Monat===month) && (!mitId || (e.fields.Mitarbeiter||[])[0]===mitId));
 }
-function stats(month, mitId, soll){
+function stats(month, mitId, soll, monatsSoll){
   const es=entriesFor(month,mitId);
   let ist=0, absTage=0, warns=0; const belegt=new Set();
   es.forEach(e=>{
@@ -442,9 +442,10 @@ function stats(month, mitId, soll){
     if(e.fields.Hinweis) warns++;
     if(e.fields.Datum) belegt.add(e.fields.Datum);
   });
-  const tagesSoll=(Number(soll)||40)/5;
   const wdTotal=workdaysInMonth(month,false), wdBis=workdaysInMonth(month,true);
-  const sollMonat=wdTotal*tagesSoll;
+  const ms=Number(monatsSoll)||0;
+  const tagesSoll= ms>0 ? ms/wdTotal : (Number(soll)||40)/5;
+  const sollMonat= ms>0 ? ms : wdTotal*tagesSoll;
   const sollBisHeute=(month===ym(new Date())?wdBis:wdTotal)*tagesSoll;
   const saldo=ist+absTage*tagesSoll-sollBisHeute;
   let fehl=0; const today=todayISO();
@@ -472,7 +473,7 @@ function entryRow(e, showName){
 function renderMeine(){
   $("#mLabel").textContent=monLabel(viewMonth);
   const my=MIT.find(m=>m.id===ME_ID);
-  const st=stats(viewMonth, ME_ID, my&&my.fields["Wochenstunden (Soll)"]);
+  const st=stats(viewMonth, ME_ID, my&&my.fields["Wochenstunden (Soll)"], my&&my.fields["Monatsstunden (Soll)"]);
   $("#myTiles").innerHTML =
     '<div class="tile good"><div class="k">Gearbeitet</div><div class="v">'+fmtStd(st.ist)+' <small>Std</small></div></div>'
     +'<div class="tile"><div class="k">Soll (Monat)</div><div class="v">'+fmtStd(st.sollMonat)+' <small>Std</small></div></div>'
@@ -490,11 +491,11 @@ function renderTeam(){
   const aktive=MIT.filter(m=>m.fields.Aktiv && !m.fields.Admin || (m.fields.Admin&&entriesFor(teamMonth,m.id).length));
   let sumIst=0,sumSoll=0,sumWarn=0,sumFehl=0;
   const cards=aktive.map(m=>{
-    const st=stats(teamMonth,m.id,m.fields["Wochenstunden (Soll)"]);
+    const st=stats(teamMonth,m.id,m.fields["Wochenstunden (Soll)"],m.fields["Monatsstunden (Soll)"]);
     sumIst+=st.ist; sumSoll+=st.sollBisHeute; sumWarn+=st.warns; sumFehl+=st.fehl;
     const pct=st.sollBisHeute>0?Math.min(100,Math.round((st.ist+st.absTage*st.tagesSoll)/st.sollBisHeute*100)):0;
     return '<div class="card"><h3>'+m.fields.Name+'</h3>'
-      +'<div class="sub">'+fmtStd(m.fields["Wochenstunden (Soll)"]||40)+' Std/Woche</div>'
+      +'<div class="sub">'+(Number(m.fields["Monatsstunden (Soll)"])>0 ? fmtStd(m.fields["Monatsstunden (Soll)"])+' Std/Monat' : fmtStd(m.fields["Wochenstunden (Soll)"]||40)+' Std/Woche')+'</div>'
       +'<div class="prog"><i style="width:'+pct+'%'+(st.saldo<0?';background:var(--warn)':'')+'"></i></div>'
       +'<div class="kv"><span class="k">Gearbeitet</span><span class="v">'+fmtStd(st.ist)+' h</span></div>'
       +'<div class="kv"><span class="k">Saldo bis heute</span><span class="v '+(st.saldo<0?"bad":"good")+'">'+(st.saldo>=0?"+":"")+fmtStd(st.saldo)+' h</span></div>'
