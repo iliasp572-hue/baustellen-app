@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Zeiterfassung – Syrink</title>
+<style>
+  :root{
+    --bg:#eef2f6; --panel:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+    --primary:#0284c7; --primary-d:#0369a1; --accent:#16a34a; --accent-l:#dcfce7;
+    --danger:#dc2626; --danger-l:#fee2e2; --warn:#d97706; --warn-l:#fef3c7;
+    --neutral:#94a3b8; --shadow:0 1px 3px rgba(15,23,42,.08),0 8px 24px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer}
+  .hide{display:none!important}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 16px 70px}
+
+  /* Passcode-Gate */
+  .gate{min-height:100dvh;display:grid;place-items:center;padding:24px}
+  .gate-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:26px;width:100%;max-width:360px;text-align:center}
+  .gate-card .glogo{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#0284c7,#16a34a);display:grid;place-items:center;color:#fff;margin:0 auto 14px}
+  .gate-logo-img{height:30px;width:auto;margin:0 auto 16px;display:block}
+  .gate-card h1{font-size:20px;margin:0 0 4px}
+  .gate-card p{color:var(--muted);font-size:14px;margin:0 0 18px}
+  .code-in{width:100%;text-align:center;font-size:22px;letter-spacing:6px;font-weight:700;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  .gate-btn{border:1px solid var(--primary);background:var(--primary);color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;font-size:15px;width:100%}
+  .gate-err{color:var(--danger);font-size:13px;min-height:18px;margin-top:8px}
+
+  /* Header */
+  header.top{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:var(--shadow)}
+  .top-in{max-width:1000px;margin:0 auto;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.2px}
+  .brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#0284c7,#16a34a);display:grid;place-items:center;color:#fff;flex:none}
+  .brand .logo-img{height:26px;width:auto;display:block;flex:none}
+  .brand .appdiv{padding-left:11px;margin-left:1px;border-left:1px solid var(--line);font-size:15px}
+  .spacer{flex:1}
+  .badge-role{font-size:12px;font-weight:800;padding:5px 11px;border-radius:999px;letter-spacing:.3px}
+  .badge-role.adm{background:#ede9fe;color:#6d28d9}
+  .badge-role.mit{background:var(--accent-l);color:#166534}
+  .iconbtn{border:1px solid var(--line);background:var(--panel);border-radius:10px;width:38px;height:38px;display:grid;place-items:center;color:var(--muted);flex:none}
+  .iconbtn:active{background:#f1f5f9}
+  .iconbtn svg{width:18px;height:18px}
+
+  /* Tabs */
+  .role{display:flex;background:#f1f5f9;border:1px solid var(--line);border-radius:999px;padding:3px;margin:16px 0 0;width:fit-content}
+  .role button{border:0;background:transparent;padding:8px 16px;border-radius:999px;font-weight:600;font-size:13.5px;color:var(--muted)}
+  .role button.active{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+  @media(max-width:560px){ .role{width:100%} .role button{flex:1;padding:8px 6px} }
+
+  .page-h{display:flex;align-items:baseline;gap:12px;margin:20px 0 6px;flex-wrap:wrap}
+  .page-h h1{font-size:22px;margin:0;letter-spacing:-.4px}
+  .page-h .sub{color:var(--muted);font-size:14px}
+
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-top:14px}
+  .box h4{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+
+  /* Formular */
+  .frm{display:grid;gap:12px}
+  .frm label{font-size:12.5px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px}
+  .frm input[type=date],.frm input[type=time],.frm input[type=text],.frm select{width:100%;font-family:inherit;font-size:16px;font-weight:600;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);-webkit-appearance:none}
+  .frm input:focus,.frm select:focus{outline:none;border-color:var(--primary)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media(max-width:560px){ .row3{grid-template-columns:1fr 1fr} }
+  .typ-seg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .typ-seg button{border:1px solid var(--line);background:#f8fafc;color:var(--muted);font-weight:700;font-size:13px;padding:10px 4px;border-radius:11px}
+  .typ-seg button.on{border-color:var(--primary);background:#e0f2fe;color:var(--primary-d)}
+  .typ-seg button.on[data-t="Urlaub"]{border-color:#60a5fa;background:#dbeafe;color:#1d4ed8}
+  .typ-seg button.on[data-t="Krank"]{border-color:#fdba74;background:#ffedd5;color:#c2410c}
+  .typ-seg button.on[data-t="Feiertag/Frei"]{border-color:#cbd5e1;background:#f1f5f9;color:#475569}
+  .live{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f8fafc;border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:14px}
+  .live b{font-size:17px}
+  .save-btn{border:1px solid var(--accent);background:var(--accent);color:#fff;padding:14px;border-radius:12px;font-weight:800;font-size:16px;width:100%}
+  .save-btn:disabled{opacity:.6}
+  .edit-note{background:var(--warn-l);color:#92400e;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .edit-note button{border:0;background:transparent;color:#92400e;font-weight:800;text-decoration:underline;padding:0}
+
+  /* Chips + Karten */
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:5px}
+  .chip.arb{background:var(--accent-l);color:#166534}
+  .chip.url{background:#dbeafe;color:#1d4ed8}
+  .chip.krk{background:#ffedd5;color:#c2410c}
+  .chip.fei{background:#f1f5f9;color:#475569}
+  .chip.warn{background:var(--warn-l);color:#92400e}
+
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:640px){ .tiles{grid-template-columns:1fr 1fr} }
+  .tile{border:1px solid var(--line);border-radius:12px;padding:12px;background:#f8fafc}
+  .tile .k{font-size:12px;color:var(--muted);font-weight:600}
+  .tile .v{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-top:2px}
+  .tile .v small{font-size:13px;color:var(--muted);font-weight:600}
+  .tile.good .v{color:var(--accent)}
+  .tile.bad .v{color:var(--danger)}
+
+  .mon-nav{display:flex;align-items:center;gap:10px;margin-top:16px}
+  .mon-nav .mon{font-weight:800;font-size:17px;min-width:150px;text-align:center}
+  .mon-nav .mbtn{border:1px solid var(--line);background:var(--panel);border-radius:10px;width:36px;height:36px;display:grid;place-items:center;color:var(--muted);font-size:16px;font-weight:800}
+
+  .e-row{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid #f1f5f9;flex-wrap:wrap}
+  .e-row:last-child{border-bottom:0}
+  .e-date{font-weight:800;font-size:14px;min-width:96px}
+  .e-date small{display:block;color:var(--muted);font-weight:600;font-size:11.5px}
+  .e-time{font-size:13.5px;color:var(--muted);font-weight:600;min-width:120px}
+  .e-std{margin-left:auto;font-weight:800;font-size:15px;min-width:56px;text-align:right}
+  .e-edit{border:1px solid var(--line);background:#f8fafc;border-radius:9px;width:32px;height:32px;display:grid;place-items:center;color:var(--muted)}
+  .e-edit svg{width:14px;height:14px}
+
+  .emp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+  .card h3{margin:0 0 3px;font-size:15px;letter-spacing:-.2px}
+  .card .sub{color:var(--muted);font-size:12.5px;margin-bottom:9px}
+  .prog{height:8px;background:#eef2f6;border-radius:5px;overflow:hidden;margin-top:10px}
+  .prog > i{display:block;height:100%;background:var(--accent);transition:width .2s}
+  .kv{display:flex;justify-content:space-between;font-size:13px;margin-top:7px}
+  .kv .k{color:var(--muted);font-weight:600}
+  .kv .v{font-weight:800}
+  .kv .v.bad{color:var(--danger)} .kv .v.good{color:var(--accent)} .kv .v.warn{color:var(--warn)}
+
+  .btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:9px 14px;border-radius:10px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:7px}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .btn svg{width:16px;height:16px}
+
+  .empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:15px}
+  .empty .big{font-size:34px;margin-bottom:10px}
+  .center{min-height:55dvh;display:grid;place-items:center;text-align:center;color:var(--muted);padding:24px}
+  .spin{width:34px;height:34px;border:3px solid #cbd5e1;border-top-color:var(--primary);border-radius:50%;animation:s .8s linear infinite;margin:0 auto 12px}
+  @keyframes s{to{transform:rotate(360deg)}}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:#0f172a;color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:var(--shadow);transition:.25s;z-index:60;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.bad{background:var(--danger)}
+</style>
+</head>
+<body>
+
+<!-- Login-Gate -->
+<div id="gate" class="gate">
+  <div class="gate-card">
+    <img class="gate-logo-img" src="https://www.syrink.de/cdn/shop/files/Asset_4.png?width=320" alt="Syrink Solar" onerror="this.style.display='none';document.getElementById('gateFallback').style.display='grid'">
+    <div class="glogo" id="gateFallback" style="display:none"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/></svg></div>
+    <h1>Zeiterfassung</h1>
+    <p>Bitte Zugangscode eingeben</p>
+    <input id="codeIn" class="code-in" type="tel" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off">
+    <button class="gate-btn" id="codeBtn">Anmelden</button>
+    <div class="gate-err" id="codeErr"></div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" class="hide">
+  <header class="top"><div class="top-in">
+    <div class="brand">
+      <img class="logo-img" src="https://www.syrink.de/cdn/shop/files/Asset_4.png?width=200" alt="Syrink" onerror="this.outerHTML='<div class=logo>☀</div>'">
+      <span class="appdiv">Zeiterfassung</span>
+    </div>
+    <div class="spacer"></div>
+    <span id="roleBadge" class="badge-role mit">–</span>
+    <button class="iconbtn" id="reloadBtn" title="Aktualisieren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+    <button class="iconbtn" id="logoutBtn" title="Abmelden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></button>
+  </div></header>
+
+  <div class="wrap">
+    <div class="role" id="tabs">
+      <button data-tab="erfassen" class="active">✏️ Eintragen</button>
+      <button data-tab="meine">📅 Meine Zeiten</button>
+      <button data-tab="team" class="hide">👷 Team</button>
+    </div>
+
+    <!-- TAB: Eintragen -->
+    <section id="tab-erfassen">
+      <div class="page-h"><h1 id="hallo">Zeit eintragen</h1><span class="sub" id="halloSub"></span></div>
+      <div class="box"><div class="frm">
+        <div id="editNote" class="edit-note hide"><span>✏️ Eintrag wird bearbeitet</span><button id="editCancel">Abbrechen</button></div>
+        <div id="mitWrap" class="hide">
+          <label>Mitarbeiter</label>
+          <select id="fMit"></select>
+        </div>
+        <div>
+          <label>Art</label>
+          <div class="typ-seg" id="typSeg">
+            <button data-t="Arbeit" class="on">Arbeit</button>
+            <button data-t="Urlaub">Urlaub</button>
+            <button data-t="Krank">Krank</button>
+            <button data-t="Feiertag/Frei">Feiertag</button>
+          </div>
+        </div>
+        <div class="row2">
+          <div><label id="lblDatum">Datum</label><input type="date" id="fDatum"></div>
+          <div id="bisWrap" class="hide"><label>bis (optional, Wochenende wird übersprungen)</label><input type="date" id="fBis"></div>
+        </div>
+        <div class="row3" id="zeitRow">
+          <div><label>Beginn</label><input type="time" id="fBeginn" value="07:00" step="300"></div>
+          <div><label>Ende</label><input type="time" id="fEnde" value="16:30" step="300"></div>
+          <div><label>Pause</label>
+            <select id="fPause">
+              <option value="0">keine</option><option value="15">15 Min</option>
+              <option value="30" selected>30 Min</option><option value="45">45 Min</option>
+              <option value="60">60 Min</option><option value="90">90 Min</option>
+            </select>
+          </div>
+        </div>
+        <div><label>Notiz (optional)</label><input type="text" id="fNotiz" placeholder="z. B. Baustelle Wagner, Materialfahrt …" maxlength="200"></div>
+        <div class="live" id="liveCalc"></div>
+        <button class="save-btn" id="saveBtn">✓ Speichern</button>
+      </div></div>
+    </section>
+
+    <!-- TAB: Meine Zeiten -->
+    <section id="tab-meine" class="hide">
+      <div class="page-h"><h1>Meine Zeiten</h1></div>
+      <div class="mon-nav">
+        <button class="mbtn" id="mPrev">‹</button>
+        <div class="mon" id="mLabel"></div>
+        <button class="mbtn" id="mNext">›</button>
+      </div>
+      <div class="box"><div class="tiles" id="myTiles"></div></div>
+      <div class="box" id="myList"></div>
+    </section>
+
+    <!-- TAB: Team (Admin) -->
+    <section id="tab-team" class="hide">
+      <div class="page-h"><h1>Team-Übersicht</h1><span class="sub">Alle Mitarbeiter im Monat</span></div>
+      <div class="mon-nav">
+        <button class="mbtn" id="tPrev">‹</button>
+        <div class="mon" id="tLabel"></div>
+        <button class="mbtn" id="tNext">›</button>
+        <div class="spacer"></div>
+        <button class="btn" id="csvBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>CSV-Export</button>
+      </div>
+      <div class="box"><div class="tiles" id="teamTiles"></div></div>
+      <div class="emp-grid" id="teamGrid"></div>
+      <div class="box" id="teamWarn"></div>
+    </section>
+
+    <div id="loading" class="center hide"><div><div class="spin"></div>Daten werden geladen …</div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ================= KONFIG ================= */
+const CONFIG = {
+  DATA_URL: "https://hook.eu2.make.com/y9cspba9ridmz97v3gt365xtk61tn3dn",
+  SAVE_URL: "https://hook.eu2.make.com/7t4km2sapacsqmkgri7i50ej05gg6fov"
+};
+/* Gesetzliche Grenzen (ArbZG) */
+const MAX_STD = 10, P30 = 6, P45 = 9;
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+let CODE = null, ROLE = "mit", ME = "", ME_ID = "";
+let MIT = [], ENTRIES = [];
+let editRecId = null;
+let viewMonth = ym(new Date()), teamMonth = ym(new Date());
+
+/* ================= Helfer ================= */
+function ym(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
+function ymShift(m, delta){ const [y,mo]=m.split("-").map(Number); const d=new Date(y, mo-1+delta, 1); return ym(d); }
+function monLabel(m){ const [y,mo]=m.split("-").map(Number); return ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"][mo-1]+" "+y; }
+function t2s(t){ if(!t) return 0; const [h,m]=t.split(":").map(Number); return h*3600+m*60; }
+function s2t(s){ s=Number(s)||0; return String(Math.floor(s/3600)).padStart(2,"0")+":"+String(Math.floor(s%3600/60)).padStart(2,"0"); }
+function fmtStd(n){ return (Math.round(n*100)/100).toLocaleString("de-DE",{maximumFractionDigits:2}); }
+function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function wdName(iso){ return ["So","Mo","Di","Mi","Do","Fr","Sa"][new Date(iso+"T12:00:00").getDay()]; }
+function isWeekend(iso){ const d=new Date(iso+"T12:00:00").getDay(); return d===0||d===6; }
+function workdaysInMonth(m, untilToday){
+  const [y,mo]=m.split("-").map(Number);
+  const last = new Date(y, mo, 0).getDate();
+  const today = todayISO(); let n=0;
+  for(let d=1; d<=last; d++){
+    const iso = m+"-"+String(d).padStart(2,"0");
+    if(untilToday && iso > today) break;
+    if(!isWeekend(iso)) n++;
+  }
+  return n;
+}
+function calcStd(beginn, ende, pause){ return Math.max(0,(t2s(ende)-t2s(beginn)-pause*60)/3600); }
+function pauseCheck(std, pauseMin){
+  if(std > MAX_STD) return "über 10 Std – gesetzliche Höchstgrenze!";
+  if(std > P45 && pauseMin < 45) return "ab 9 Std sind 45 Min Pause Pflicht";
+  if(std > P30 && pauseMin < 30) return "ab 6 Std sind 30 Min Pause Pflicht";
+  return "";
+}
+function toast(msg, bad){ const t=$("#toast"); t.textContent=msg; t.className="toast show"+(bad?" bad":""); clearTimeout(t._x); t._x=setTimeout(()=>t.className="toast",2600); }
+function mitName(ids){ if(!ids||!ids.length) return "?"; const m=MIT.find(x=>x.id===ids[0]); return m?m.fields.Name:"?"; }
+
+/* ================= Laden ================= */
+async function loadAll(code){
+  $("#loading").classList.remove("hide");
+  try{
+    let entries=[], meta=null, offset="", guard=0;
+    do{
+      const u = CONFIG.DATA_URL+"?code="+encodeURIComponent(code)+(offset?("&offset="+encodeURIComponent(offset)):"");
+      const r = await fetch(u,{cache:"no-store"});
+      const d = await r.json();
+      if(d.error) return {error:true};
+      meta = d; entries = entries.concat((d.entries&&d.entries.records)||[]);
+      offset = (d.entries&&d.entries.offset)||""; guard++;
+    }while(offset && guard<30);
+    ROLE=meta.role; ME=meta.me; ME_ID=meta.meId;
+    MIT=(meta.mitarbeiter&&meta.mitarbeiter.records)||[]; ENTRIES=entries;
+    return {ok:true};
+  }catch(e){ return {netfail:true}; }
+  finally{ $("#loading").classList.add("hide"); }
+}
+
+/* ================= Login ================= */
+async function unlock(){
+  const v=$("#codeIn").value.trim();
+  if(!v){ $("#codeErr").textContent="Bitte Code eingeben."; return; }
+  $("#codeBtn").disabled=true; $("#codeErr").textContent="";
+  const res=await loadAll(v);
+  $("#codeBtn").disabled=false;
+  if(res.error){ $("#codeErr").textContent="Falscher Code."; $("#codeIn").value=""; return; }
+  if(res.netfail){ $("#codeErr").textContent="Keine Verbindung. Später erneut versuchen."; return; }
+  CODE=v; try{ localStorage.setItem("zeCode",v); }catch(e){}
+  enterApp();
+}
+function enterApp(){
+  $("#gate").classList.add("hide"); $("#app").classList.remove("hide");
+  const adm = ROLE==="admin";
+  $("#roleBadge").textContent = adm ? "ADMIN" : ME;
+  $("#roleBadge").className = "badge-role "+(adm?"adm":"mit");
+  $("#halloSub").textContent = adm ? "als Admin auch für andere möglich" : "Hallo "+ME.split(" ")[0]+"!";
+  $$("#tabs button").forEach(b=>{ if(b.dataset.tab==="team") b.classList.toggle("hide",!adm); });
+  if(adm){
+    $("#mitWrap").classList.remove("hide");
+    const sel=$("#fMit"); sel.innerHTML="";
+    MIT.filter(m=>m.fields.Aktiv).forEach(m=>{
+      const o=document.createElement("option"); o.value=m.id; o.textContent=m.fields.Name;
+      if(m.id===ME_ID) o.selected=true; sel.appendChild(o);
+    });
+  }
+  $("#fDatum").value = todayISO();
+  renderAll();
+}
+function logout(){ try{ localStorage.removeItem("zeCode"); }catch(e){} location.reload(); }
+
+/* ================= Eintragen ================= */
+function curTyp(){ return $("#typSeg .on").dataset.t; }
+function updateLive(){
+  const typ=curTyp(), arbeit = typ==="Arbeit";
+  $("#zeitRow").classList.toggle("hide", !arbeit);
+  $("#bisWrap").classList.toggle("hide", arbeit);
+  $("#lblDatum").textContent = arbeit ? "Datum" : "Datum (von)";
+  const live=$("#liveCalc");
+  if(!arbeit){ live.innerHTML="Ganztägig: <b>"+typ+"</b>"; checkDup(); return; }
+  const p=Number($("#fPause").value);
+  const std=calcStd($("#fBeginn").value, $("#fEnde").value, p);
+  const warn=pauseCheck(std,p);
+  live.innerHTML = "Arbeitszeit: <b>"+fmtStd(std)+" Std</b>"
+    + (warn ? ' <span class="chip warn">⚠️ '+warn+'</span>' : ' <span class="chip arb">✓ ok</span>');
+  checkDup();
+}
+function checkDup(){
+  if(editRecId) return;
+  const datum=$("#fDatum").value; if(!datum) return;
+  const wer = ROLE==="admin" ? $("#fMit").value : ME_ID;
+  const dup = ENTRIES.find(e=>e.fields.Datum===datum && (e.fields.Mitarbeiter||[])[0]===wer);
+  if(dup){
+    const el=$("#liveCalc");
+    el.innerHTML += ' <span class="chip warn">Für '+wdName(datum)+' '+datum.split("-").reverse().join(".")+' gibt es schon einen Eintrag – er wird beim Speichern NICHT ersetzt.</span>';
+  }
+}
+function startEdit(rec){
+  editRecId=rec.id;
+  $("#editNote").classList.remove("hide");
+  const f=rec.fields;
+  $("#fDatum").value=f.Datum||todayISO();
+  $$("#typSeg button").forEach(b=>b.classList.toggle("on", b.dataset.t===(f.Typ&&f.Typ.name?f.Typ.name:f.Typ)));
+  $("#fBeginn").value=s2t(f.Beginn); $("#fEnde").value=s2t(f.Ende);
+  const pm=Math.round((Number(f.Pause)||0)/60); const sel=$("#fPause");
+  if(![...sel.options].some(o=>Number(o.value)===pm)){ const o=document.createElement("option"); o.value=pm; o.textContent=pm+" Min"; sel.appendChild(o); }
+  sel.value=pm;
+  $("#fNotiz").value=f.Notiz||"";
+  if(ROLE==="admin" && f.Mitarbeiter&&f.Mitarbeiter[0]) $("#fMit").value=f.Mitarbeiter[0];
+  switchTab("erfassen"); updateLive();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function cancelEdit(){ editRecId=null; $("#editNote").classList.add("hide"); $("#fNotiz").value=""; $("#fDatum").value=todayISO(); updateLive(); }
+
+async function save(){
+  const typ=curTyp(), arbeit=typ==="Arbeit";
+  const datum=$("#fDatum").value;
+  if(!datum){ toast("Bitte Datum wählen.",true); return; }
+  const notiz=($("#fNotiz").value||"").replace(/["\n\r\\]/g,"'").trim();
+  let beginn=0, ende=0, pause=0;
+  if(arbeit){
+    beginn=t2s($("#fBeginn").value); ende=t2s($("#fEnde").value); pause=Number($("#fPause").value)*60;
+    if(ende<=beginn){ toast("Ende muss nach Beginn liegen.",true); return; }
+  }
+  let tage=[datum];
+  const bis=$("#fBis").value;
+  if(!arbeit && !editRecId && bis && bis>datum){
+    tage=[]; let d=new Date(datum+"T12:00:00"); const end=new Date(bis+"T12:00:00");
+    while(d<=end){
+      const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+      if(!isWeekend(iso)) tage.push(iso);
+      d.setDate(d.getDate()+1);
+    }
+    if(!tage.length){ toast("Nur Wochenende im Zeitraum.",true); return; }
+  }
+  const btn=$("#saveBtn"); btn.disabled=true; btn.textContent="Speichern …";
+  try{
+    let okCount=0;
+    for(const tag of tage){
+      const p=new URLSearchParams({code:CODE, datum:tag, typ:typ, beginn:String(beginn), ende:String(ende), pause:String(pause), notiz:notiz});
+      if(editRecId) p.set("recId", editRecId);
+      if(ROLE==="admin" && !editRecId) p.set("mitId", $("#fMit").value);
+      const r=await fetch(CONFIG.SAVE_URL+"?"+p.toString(),{cache:"no-store"});
+      const d=await r.json().catch(()=>({}));
+      if(d && d.ok) okCount++;
+    }
+    if(okCount===tage.length){
+      toast(editRecId ? "Eintrag aktualisiert ✓" : (okCount>1 ? okCount+" Tage gespeichert ✓" : "Gespeichert ✓"));
+      cancelEdit(); $("#fBis").value="";
+      await loadAll(CODE); renderAll();
+    } else { toast("Fehler beim Speichern ("+okCount+"/"+tage.length+").",true); }
+  }catch(e){ toast("Keine Verbindung.",true); }
+  finally{ btn.disabled=false; btn.textContent="✓ Speichern"; }
+}
+
+/* ================= Auswertung ================= */
+function typName(t){ return t&&t.name?t.name:(t||""); }
+function entriesFor(month, mitId){
+  return ENTRIES.filter(e=>(e.fields.Monat===month) && (!mitId || (e.fields.Mitarbeiter||[])[0]===mitId));
+}
+function stats(month, mitId, soll){
+  const es=entriesFor(month,mitId);
+  let ist=0, absTage=0, warns=0; const belegt=new Set();
+  es.forEach(e=>{
+    const t=typName(e.fields.Typ);
+    if(t==="Arbeit") ist+=Number(e.fields.Stunden)||0; else absTage++;
+    if(e.fields.Hinweis) warns++;
+    if(e.fields.Datum) belegt.add(e.fields.Datum);
+  });
+  const tagesSoll=(Number(soll)||40)/5;
+  const wdTotal=workdaysInMonth(month,false), wdBis=workdaysInMonth(month,true);
+  const sollMonat=wdTotal*tagesSoll;
+  const sollBisHeute=(month===ym(new Date())?wdBis:wdTotal)*tagesSoll;
+  const saldo=ist+absTage*tagesSoll-sollBisHeute;
+  let fehl=0; const today=todayISO();
+  const [y,mo]=month.split("-").map(Number); const last=new Date(y,mo,0).getDate();
+  for(let d=1;d<=last;d++){
+    const iso=month+"-"+String(d).padStart(2,"0");
+    if(iso>today) break;
+    if(!isWeekend(iso) && !belegt.has(iso)) fehl++;
+  }
+  return {es,ist,absTage,warns,sollMonat,sollBisHeute,saldo,fehl,tagesSoll};
+}
+function entryRow(e, showName){
+  const f=e.fields, t=typName(f.Typ);
+  const cls=t==="Arbeit"?"arb":t==="Urlaub"?"url":t==="Krank"?"krk":"fei";
+  const dat=(f.Datum||"").split("-").reverse().join(".");
+  return '<div class="e-row">'
+    +'<div class="e-date">'+wdName(f.Datum)+', '+dat+(showName?'<small>'+mitName(f.Mitarbeiter)+'</small>':'')+'</div>'
+    +'<span class="chip '+cls+'">'+t+'</span>'
+    +(t==="Arbeit"?'<span class="e-time">'+s2t(f.Beginn)+'–'+s2t(f.Ende)+' · '+Math.round((Number(f.Pause)||0)/60)+' Min P.</span>':'')
+    +(f.Hinweis?'<span class="chip warn">'+f.Hinweis+'</span>':'')
+    +'<span class="e-std">'+(t==="Arbeit"?fmtStd(Number(f.Stunden)||0)+' h':'—')+'</span>'
+    +'<button class="e-edit" data-rec="'+e.id+'" title="Bearbeiten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>'
+    +'</div>';
+}
+function renderMeine(){
+  $("#mLabel").textContent=monLabel(viewMonth);
+  const my=MIT.find(m=>m.id===ME_ID);
+  const st=stats(viewMonth, ME_ID, my&&my.fields["Wochenstunden (Soll)"]);
+  $("#myTiles").innerHTML =
+    '<div class="tile good"><div class="k">Gearbeitet</div><div class="v">'+fmtStd(st.ist)+' <small>Std</small></div></div>'
+    +'<div class="tile"><div class="k">Soll (Monat)</div><div class="v">'+fmtStd(st.sollMonat)+' <small>Std</small></div></div>'
+    +'<div class="tile '+(st.saldo<0?"bad":"good")+'"><div class="k">Saldo bis heute</div><div class="v">'+(st.saldo>=0?"+":"")+fmtStd(st.saldo)+' <small>Std</small></div></div>'
+    +'<div class="tile"><div class="k">Urlaub/Krank</div><div class="v">'+st.absTage+' <small>Tage</small></div></div>';
+  const es=st.es.slice().sort((a,b)=>(b.fields.Datum||"").localeCompare(a.fields.Datum||""));
+  $("#myList").innerHTML = es.length
+    ? es.map(e=>entryRow(e,false)).join("")
+    : '<div class="empty"><div class="big">🗓️</div>Noch keine Einträge in diesem Monat.</div>';
+  bindEdit("#myList");
+}
+function renderTeam(){
+  if(ROLE!=="admin") return;
+  $("#tLabel").textContent=monLabel(teamMonth);
+  const aktive=MIT.filter(m=>m.fields.Aktiv && !m.fields.Admin || (m.fields.Admin&&entriesFor(teamMonth,m.id).length));
+  let sumIst=0,sumSoll=0,sumWarn=0,sumFehl=0;
+  const cards=aktive.map(m=>{
+    const st=stats(teamMonth,m.id,m.fields["Wochenstunden (Soll)"]);
+    sumIst+=st.ist; sumSoll+=st.sollBisHeute; sumWarn+=st.warns; sumFehl+=st.fehl;
+    const pct=st.sollBisHeute>0?Math.min(100,Math.round((st.ist+st.absTage*st.tagesSoll)/st.sollBisHeute*100)):0;
+    return '<div class="card"><h3>'+m.fields.Name+'</h3>'
+      +'<div class="sub">'+fmtStd(m.fields["Wochenstunden (Soll)"]||40)+' Std/Woche</div>'
+      +'<div class="prog"><i style="width:'+pct+'%'+(st.saldo<0?';background:var(--warn)':'')+'"></i></div>'
+      +'<div class="kv"><span class="k">Gearbeitet</span><span class="v">'+fmtStd(st.ist)+' h</span></div>'
+      +'<div class="kv"><span class="k">Saldo bis heute</span><span class="v '+(st.saldo<0?"bad":"good")+'">'+(st.saldo>=0?"+":"")+fmtStd(st.saldo)+' h</span></div>'
+      +'<div class="kv"><span class="k">Urlaub/Krank</span><span class="v">'+st.absTage+' Tage</span></div>'
+      +'<div class="kv"><span class="k">Fehlende Einträge</span><span class="v '+(st.fehl?"warn":"")+'">'+st.fehl+' Tage</span></div>'
+      +(st.warns?'<div class="kv"><span class="k">⚠️ ArbZG-Hinweise</span><span class="v warn">'+st.warns+'</span></div>':'')
+      +'</div>';
+  }).join("");
+  $("#teamGrid").innerHTML = cards || '<div class="empty">Keine aktiven Mitarbeiter.</div>';
+  $("#teamTiles").innerHTML =
+    '<div class="tile good"><div class="k">Team gesamt</div><div class="v">'+fmtStd(sumIst)+' <small>Std</small></div></div>'
+    +'<div class="tile"><div class="k">Soll bis heute</div><div class="v">'+fmtStd(sumSoll)+' <small>Std</small></div></div>'
+    +'<div class="tile '+(sumFehl?"bad":"")+'"><div class="k">Fehlende Einträge</div><div class="v">'+sumFehl+' <small>Tage</small></div></div>'
+    +'<div class="tile '+(sumWarn?"bad":"good")+'"><div class="k">ArbZG-Hinweise</div><div class="v">'+sumWarn+'</div></div>';
+  const warnEs=entriesFor(teamMonth).filter(e=>e.fields.Hinweis)
+    .sort((a,b)=>(b.fields.Datum||"").localeCompare(a.fields.Datum||""));
+  $("#teamWarn").innerHTML = '<h4>Alle Einträge des Monats</h4>'
+    + (entriesFor(teamMonth).length
+      ? entriesFor(teamMonth).sort((a,b)=>(b.fields.Datum||"").localeCompare(a.fields.Datum||"")).map(e=>entryRow(e,true)).join("")
+      : '<div class="empty">Keine Einträge.</div>');
+  bindEdit("#teamWarn");
+}
+function bindEdit(scope){
+  $$(scope+" .e-edit").forEach(b=>b.onclick=()=>{
+    const rec=ENTRIES.find(e=>e.id===b.dataset.rec);
+    if(rec) startEdit(rec);
+  });
+}
+function exportCSV(){
+  const es=entriesFor(teamMonth).slice().sort((a,b)=>{
+    const n=mitName(a.fields.Mitarbeiter).localeCompare(mitName(b.fields.Mitarbeiter));
+    return n||(a.fields.Datum||"").localeCompare(b.fields.Datum||"");
+  });
+  if(!es.length){ toast("Keine Einträge im Monat.",true); return; }
+  let csv="\uFEFFMitarbeiter;Datum;Art;Beginn;Ende;Pause (Min);Stunden;Notiz\n";
+  es.forEach(e=>{ const f=e.fields, t=typName(f.Typ);
+    csv+=[mitName(f.Mitarbeiter), (f.Datum||"").split("-").reverse().join("."), t,
+      t==="Arbeit"?s2t(f.Beginn):"", t==="Arbeit"?s2t(f.Ende):"",
+      t==="Arbeit"?Math.round((Number(f.Pause)||0)/60):"",
+      t==="Arbeit"?fmtStd(Number(f.Stunden)||0):"",
+      '"'+String(f.Notiz||"").replace(/"/g,"'")+'"'].join(";")+"\n";
+  });
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="Zeiterfassung_"+teamMonth+".csv"; a.click();
+}
+
+/* ================= Tabs & Events ================= */
+function switchTab(name){
+  $$("#tabs button").forEach(b=>b.classList.toggle("active", b.dataset.tab===name));
+  ["erfassen","meine","team"].forEach(t=>$("#tab-"+t).classList.toggle("hide", t!==name));
+  if(name==="meine") renderMeine();
+  if(name==="team") renderTeam();
+}
+function renderAll(){ updateLive(); renderMeine(); renderTeam(); }
+
+$("#codeBtn").onclick=unlock;
+$("#codeIn").addEventListener("keydown",e=>{ if(e.key==="Enter") unlock(); });
+$("#logoutBtn").onclick=logout;
+$("#reloadBtn").onclick=async()=>{ await loadAll(CODE); renderAll(); toast("Aktualisiert ✓"); };
+$$("#tabs button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+$$("#typSeg button").forEach(b=>b.onclick=()=>{ $$("#typSeg button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); updateLive(); });
+["fBeginn","fEnde","fPause","fDatum"].forEach(id=>$("#"+id).addEventListener("change",updateLive));
+$("#fMit") && $("#fMit").addEventListener("change",updateLive);
+$("#saveBtn").onclick=save;
+$("#editCancel").onclick=cancelEdit;
+$("#mPrev").onclick=()=>{ viewMonth=ymShift(viewMonth,-1); renderMeine(); };
+$("#mNext").onclick=()=>{ viewMonth=ymShift(viewMonth,1); renderMeine(); };
+$("#tPrev").onclick=()=>{ teamMonth=ymShift(teamMonth,-1); renderTeam(); };
+$("#tNext").onclick=()=>{ teamMonth=ymShift(teamMonth,1); renderTeam(); };
+$("#csvBtn").onclick=exportCSV;
+
+/* Auto-Login */
+(async function(){
+  let saved=null; try{ saved=localStorage.getItem("zeCode"); }catch(e){}
+  if(saved){
+    const res=await loadAll(saved);
+    if(res.ok){ CODE=saved; enterApp(); return; }
+    try{ localStorage.removeItem("zeCode"); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
