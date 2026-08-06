@@ -92,6 +92,13 @@
   .chip.ok{background:var(--accent-l);color:#166534}
   .chip.bad{background:var(--danger-l);color:#991b1b}
   .chip.pack{background:#f1f5f9;color:#475569}
+  .chip.warn{background:var(--warn-l);color:#92400e}
+  .pk.big{width:30px;height:30px}
+  .stk{font-size:20px;font-weight:800;letter-spacing:-.3px}
+  .foto-btn{margin-top:14px;width:100%;border:1px solid var(--line);background:#f8fafc;color:var(--muted);font-weight:800;font-size:16px;padding:14px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px}
+  .foto-btn.ready{border-color:var(--accent);background:#f0fdf4;color:#166534}
+  .foto-btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .foto-btn:disabled{opacity:.55}
   .chip svg{width:12px;height:12px}
   .card .bar{height:6px;background:#eef2f6;border-radius:4px;margin-top:10px;overflow:hidden}
   .card .bar > i{display:block;height:100%;background:var(--accent)}
@@ -256,7 +263,7 @@ const CONFIG = {
 };
 const F = {
   siteName:["Name"], siteAddr:["Adresse"], siteStatus:["Status"], siteDate:["Termin"],
-  sitePlan:["Belegungsplan"], siteDeal:["HubSpot Deal ID"], siteFrei:["Freigabe Mitarbeiter"],
+  sitePlan:["Belegungsplan"], siteDeal:["HubSpot Deal ID"], siteFrei:["Freigabe Mitarbeiter"], siteFoto:["Foto bestaetigt"],
   mArtikel:["Artikel"], mSite:["Baustelle"], mBen:["Benoetigt","Benötigt"],
   mOut:["Outbound"], mIn:["Inbound"], mGepackt:["Gepackt"]
 };
@@ -294,7 +301,7 @@ function buildCustomers(sites,materials){
     const bp=fv(s,F.sitePlan,[]);
     const plan=bp.length?{ name:bp[0].filename||"Belegungsplan", url:bp[0].url||null }:null;
     let st=fv(s,F.siteStatus,""); if(!KNOWN.has(st)) st="";
-    return { id:s.id, name:fv(s,F.siteName,"(ohne Name)"), address:fv(s,F.siteAddr,""), date:fv(s,F.siteDate,""), status:st, crm:!!fv(s,F.siteDeal,""), released:!!fv(s,F.siteFrei,false), plan, materials:mats };
+    return { id:s.id, name:fv(s,F.siteName,"(ohne Name)"), address:fv(s,F.siteAddr,""), date:fv(s,F.siteDate,""), status:st, crm:!!fv(s,F.siteDeal,""), released:!!fv(s,F.siteFrei,false), fotoOk:!!fv(s,F.siteFoto,false), plan, materials:mats };
   });
 }
 async function fetchAll(){
@@ -348,6 +355,7 @@ function makeCard(c){
   if(s.dev>0) chips+='<span class="chip bad">'+s.dev+' Abw.</span>';
   else if(s.rel>0&&s.packed===s.rel) chips+='<span class="chip ok">stimmt</span>';
   if(s.rel>0) chips+='<span class="chip pack">'+s.packed+'/'+s.rel+' gepackt</span>';
+  if(s.rel>0&&s.packed===s.rel) chips+= c.fotoOk?'<span class="chip ok">Foto ✓</span>':'<span class="chip warn">Foto fehlt</span>';
   const card=document.createElement("div"); card.className="card";
   card.innerHTML='<h3>'+esc(c.name)+'</h3><div class="addr">'+esc(c.address)+'</div><div class="chips">'+chips+'</div>'+(s.rel?'<div class="bar"><i style="width:'+pct+'%"></i></div>':'');
   if(state.access==="admin"){
@@ -392,7 +400,8 @@ function renderEmployee(){
   const board=$("#board"); board.className=""; board.innerHTML="";
   const all=state.customers.slice();
   if(!all.length){ board.innerHTML='<div class="empty"><div class="big">📭</div>Aktuell ist nichts für dich freigegeben.<br><span style="font-size:13px">Sobald dein Chef eine Baustelle freigibt, erscheint sie hier.</span></div>'; return; }
-  const todo=all.filter(c=>!fullyPacked(c)), done=all.filter(fullyPacked);
+  const isDone=c=>fullyPacked(c)&&c.fotoOk;
+  const todo=all.filter(c=>!isDone(c)), done=all.filter(isDone);
   const grid=document.createElement("div"); grid.className="emp-grid";
   todo.forEach(c=>grid.appendChild(makeCard(c)));
   if(done.length){
@@ -420,7 +429,21 @@ function renderDetail(){
     planHtml='<div class="drop"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div style="margin-top:8px">Noch kein Belegungsplan.<br><span style="font-size:12.5px">'+(admin?'Im Büro (Airtable) beim Feld „Belegungsplan" hochladen.':'Frag im Büro nach dem Belegungsplan.')+'</span></div></div>';
   }
 
-  const rows=c.materials.map((m,i)=>{
+  const simple=!isBuero;
+  let rows,theadHtml;
+  if(simple){
+    rows=c.materials.map((m,i)=>{
+      if(!(m.benoetigt!==""&&Number(m.benoetigt)>0)) return "";
+      return '<tr>'
+        +'<td class="mat" style="font-size:15px">'+esc(m.name)+'</td>'
+        +'<td><span class="stk">'+m.benoetigt+'</span></td>'
+        +'<td><input class="pk big" type="checkbox" '+(m.gepackt?"checked":"")+' data-i="'+i+'" data-f="gepackt"></td>'
+        +'</tr>';
+    }).join("");
+    if(!rows) rows='<tr><td colspan="3" style="padding:26px;text-align:center;color:var(--muted)">Noch keine Stückzahlen vom Büro.</td></tr>';
+    theadHtml='<tr><th class="mat">Material</th><th>Stückzahl</th><th>Gepackt</th></tr>';
+  } else {
+  rows=c.materials.map((m,i)=>{
     const d=divInfo(m);
     const sug=(m.benoetigt!==""&&m.benoetigt>0)?(Number(m.benoetigt)+buf(Number(m.benoetigt))):"";
     const off=!relevant(m)?"off":"";
@@ -433,6 +456,14 @@ function renderDetail(){
       +'<td><input class="pk" type="checkbox" '+(m.gepackt?"checked":"")+' '+(isBuero?"disabled":"")+' data-i="'+i+'" data-f="gepackt"></td>'
       +'</tr>';
   }).join("");
+  theadHtml='<tr><th class="mat">Material</th><th>Benötigt</th><th>Outbound</th><th>Inbound</th><th>Div.</th><th>Gepackt</th></tr>';
+  }
+  const allPacked=s.rel>0&&s.packed===s.rel;
+  const fotoBtn = simple ? (c.fotoOk
+      ? '<button class="foto-btn on" id="fotoBtn">✓ Fertig – Foto gemacht</button>'
+      : (allPacked
+        ? '<button class="foto-btn ready" id="fotoBtn">📸 Alles gepackt? Foto von der Ware machen, dann hier drücken</button>'
+        : '<button class="foto-btn" id="fotoBtn" disabled>📸 Erst alles abhaken, dann Foto</button>')) : '';
 
   const statusOpts=COLUMNS.filter(x=>x[0]).map(([k,l])=>'<option value="'+k+'" '+(c.status===k?"selected":"")+'>'+l+'</option>').join("")+'<option value="" '+(c.status===""?"selected":"")+'>Ohne Status</option>';
   const statusCtrl = admin ? '<div class="status-sel"><span style="font-size:12.5px;color:var(--muted);font-weight:600">Status</span><select id="statusSel">'+statusOpts+'</select></div>' : '';
@@ -450,12 +481,15 @@ function renderDetail(){
     +'<div class="tile"><div class="k">Gepackt</div><div class="v">'+s.packed+'<small>/'+s.rel+'</small></div><div class="prog"><i style="width:'+pct+'%"></i></div></div>'
     +'<div class="tile '+(s.dev>0?"bad":"good")+'"><div class="k">Abweichungen (rot)</div><div class="v">'+s.dev+'</div><div style="font-size:12px;color:var(--muted);margin-top:8px">'+(s.dev>0?"Bitte prüfen / nachbestellen":"Alles im grünen Bereich")+'</div></div>'
     +'</div></div></div>'
-    +'<div class="tbl-wrap"><div class="tbl-head"><h4>Materialliste</h4><div class="legend">'
+    +'<div class="tbl-wrap"><div class="tbl-head"><h4>'+(simple?'Packliste':'Materialliste')+'</h4>'+(simple?'':'<div class="legend">'
     +'<span><i class="sw" style="background:var(--accent-l);border:1px solid #86efac"></i> Div = Benötigt (stimmt)</span>'
-    +'<span><i class="sw" style="background:var(--danger-l);border:1px solid #fca5a5"></i> Abweichung</span></div></div>'
-    +'<div style="overflow-x:auto"><table><thead><tr><th class="mat">Material</th><th>Benötigt</th><th>Outbound</th><th>Inbound</th><th>Div.</th><th>Gepackt</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-    +'<div class="hint"><b>Div. = Outbound − Inbound</b> (was tatsächlich verbraucht wurde). Ist der Wert gleich <b>Benötigt</b> → <span style="color:var(--accent);font-weight:700">grün</span>, sonst → <span style="color:var(--danger);font-weight:700">rot</span>. '
-    +(isBuero?'Als Büro füllst du <b>Benötigt</b> aus und setzt den Status.':'Du füllst <b>Outbound</b> (Vorschlag grau), später <b>Inbound</b> aus und hakst <b>Gepackt</b> ab.')+'</div></div>';
+    +'<span><i class="sw" style="background:var(--danger-l);border:1px solid #fca5a5"></i> Abweichung</span></div>')+'</div>'
+    +'<div style="overflow-x:auto"><table><thead>'+theadHtml+'</thead><tbody>'+rows+'</tbody></table></div>'
+    +(simple
+      ? '<div class="hint"><b>So geht\'s:</b> Genau die Stückzahl packen, rechts abhaken. Wenn alles gepackt ist: Foto von der Ware machen und den grünen Knopf drücken.</div>'
+      : '<div class="hint"><b>Div. = Outbound − Inbound</b> (was tatsächlich verbraucht wurde). Ist der Wert gleich <b>Benötigt</b> → <span style="color:var(--accent);font-weight:700">grün</span>, sonst → <span style="color:var(--danger);font-weight:700">rot</span>. '
+    +'Als Büro füllst du <b>Benötigt</b> aus und setzt den Status.</div>')+'</div>'
+    +fotoBtn;
 
   const ss=$("#statusSel"); if(ss) ss.onchange=e=>{ c.status=e.target.value; saveStatus(c); toast("Status gespeichert"); };
   const fr=$("#frToggle"); if(fr) fr.onclick=()=>toggleFreigabe(c);
@@ -464,11 +498,19 @@ function renderDetail(){
     inp.addEventListener(ev,e=>{
       const i=+e.target.dataset.i, f=e.target.dataset.f;
       c.materials[i][f]= f==="gepackt"? e.target.checked : (e.target.value===""?"":Number(e.target.value));
-      const d=divInfo(c.materials[i]); const badge=$("#detailBody").querySelectorAll("tbody tr")[i].querySelector(".div-badge"); badge.className="div-badge "+d.cls; badge.textContent=d.text;
+      const d=divInfo(c.materials[i]); const tr=e.target.closest("tr"); const badge=tr?tr.querySelector(".div-badge"):null; if(badge){ badge.className="div-badge "+d.cls; badge.textContent=d.text; }
       refreshTiles(c); saveMaterial(c.materials[i], f);
+      const fb2=$("#fotoBtn"); if(fb2&&!c.fotoOk){ const s2=stats(c); const ok2=s2.rel>0&&s2.packed===s2.rel; fb2.disabled=!ok2; fb2.className="foto-btn"+(ok2?" ready":""); fb2.textContent=ok2?"📸 Alles gepackt? Foto von der Ware machen, dann hier drücken":"📸 Erst alles abhaken, dann Foto"; }
     });
   });
   const sb=$("#shareBtn"); if(sb) sb.onclick=e=>openShare(e,c);
+  const fo=$("#fotoBtn"); if(fo) fo.onclick=()=>{
+    if(fo.disabled) return;
+    c.fotoOk=!c.fotoOk;
+    beacon(CONFIG.SAVE_URL+"?kind=foto&id="+encodeURIComponent(c.id)+"&foto="+(c.fotoOk?"true":"false"));
+    toast(c.fotoOk?"Fertig gemeldet ✓":"Zurückgenommen");
+    renderDetail();
+  };
 }
 function refreshTiles(c){
   const s=stats(c); const pct=s.rel?Math.round(s.packed/s.rel*100):0;
