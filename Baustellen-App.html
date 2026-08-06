@@ -433,15 +433,18 @@ function renderDetail(){
   let rows,theadHtml;
   if(simple){
     rows=c.materials.map((m,i)=>{
-      if(!(m.benoetigt!==""&&Number(m.benoetigt)>0)) return "";
-      return '<tr>'
+      const sug=(m.benoetigt!==""&&m.benoetigt>0)?(Number(m.benoetigt)+buf(Number(m.benoetigt))):"";
+      const off=!relevant(m)?"off":"";
+      return '<tr class="'+off+'">'
         +'<td class="mat" style="font-size:15px">'+esc(m.name)+'</td>'
-        +'<td><span class="stk">'+m.benoetigt+'</span></td>'
+        +'<td><span class="stk">'+(m.benoetigt===""?"–":m.benoetigt)+'</span></td>'
+        +'<td><input class="cell-in" type="number" min="0" inputmode="numeric" value="'+m.outbound+'" data-i="'+i+'" data-f="outbound" placeholder="'+(sug?"≈ "+sug:"–")+'"></td>'
+        +'<td><input class="cell-in" type="number" min="0" inputmode="numeric" value="'+m.inbound+'" data-i="'+i+'" data-f="inbound" placeholder="–"></td>'
         +'<td><input class="pk big" type="checkbox" '+(m.gepackt?"checked":"")+' data-i="'+i+'" data-f="gepackt"></td>'
         +'</tr>';
     }).join("");
-    if(!rows) rows='<tr><td colspan="3" style="padding:26px;text-align:center;color:var(--muted)">Noch keine Stückzahlen vom Büro.</td></tr>';
-    theadHtml='<tr><th class="mat">Material</th><th>Stückzahl</th><th>Gepackt</th></tr>';
+    if(!rows) rows='<tr><td colspan="5" style="padding:26px;text-align:center;color:var(--muted)">Noch keine Materialliste vom Büro.</td></tr>';
+    theadHtml='<tr><th class="mat">Material</th><th>Stückzahl</th><th>Raus</th><th>Zurück</th><th>Gepackt</th></tr>';
   } else {
   rows=c.materials.map((m,i)=>{
     const d=divInfo(m);
@@ -486,7 +489,7 @@ function renderDetail(){
     +'<span><i class="sw" style="background:var(--danger-l);border:1px solid #fca5a5"></i> Abweichung</span></div>')+'</div>'
     +'<div style="overflow-x:auto"><table><thead>'+theadHtml+'</thead><tbody>'+rows+'</tbody></table></div>'
     +(simple
-      ? '<div class="hint"><b>So geht\'s:</b> Genau die Stückzahl packen, rechts abhaken. Wenn alles gepackt ist: Foto von der Ware machen und den grünen Knopf drücken.</div>'
+      ? '<div class="hint"><b>Packen:</b> Stückzahl packen, bei <b>Raus</b> eintragen, was mitgeht (grauer Vorschlag = mit Reserve), abhaken. Wenn alles gepackt ist: Foto machen und den grünen Knopf drücken. <b>Nach der Baustelle:</b> Reste zählen und bei <b>Zurück</b> eintragen.</div>'
       : '<div class="hint"><b>Div. = Outbound − Inbound</b> (was tatsächlich verbraucht wurde). Ist der Wert gleich <b>Benötigt</b> → <span style="color:var(--accent);font-weight:700">grün</span>, sonst → <span style="color:var(--danger);font-weight:700">rot</span>. '
     +'Als Büro füllst du <b>Benötigt</b> aus und setzt den Status.</div>')+'</div>'
     +fotoBtn;
