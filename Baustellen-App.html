@@ -78,6 +78,14 @@
   .col-h{display:flex;align-items:center;gap:8px;padding:4px 6px 10px;font-weight:700;font-size:13px;color:#475569}
   .col-h .dot{width:9px;height:9px;border-radius:50%}
   .col-h .cnt{margin-left:auto;background:#fff;border:1px solid var(--line);color:var(--muted);font-size:12px;border-radius:999px;padding:1px 8px;font-weight:700}
+  .col-search{position:relative;display:flex;align-items:center;margin:0 2px 10px}
+  .col-search .search-ic{position:absolute;left:9px;width:14px;height:14px;color:var(--muted);pointer-events:none}
+  .col-search input{width:100%;padding:7px 26px 7px 29px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;background:var(--panel);color:var(--ink);-webkit-appearance:none;box-sizing:border-box}
+  .col-search input:focus{outline:none;border-color:var(--primary)}
+  .col-search input::-webkit-search-cancel-button{display:none}
+  .col-search .search-clear{position:absolute;right:4px;border:0;background:transparent;color:var(--muted);font-size:12px;cursor:pointer;padding:3px 5px;border-radius:6px;line-height:1}
+  .col-search .search-clear:hover{background:#f1f5f9}
+  .col-empty{color:var(--muted);font-size:12.5px;text-align:center;padding:10px 4px}
   .emp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:16px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(15,23,42,.05);transition:transform .08s,box-shadow .12s}
   .emp-grid .card{margin-bottom:0}
@@ -288,7 +296,7 @@ function toast(t,bad){ const el=$("#toast"); el.textContent=t; el.className="toa
 function beacon(u){ const f=document.createElement("iframe"); f.style.cssText="display:none"; f.src=u; document.body.appendChild(f); setTimeout(()=>{if(f.parentNode)f.parentNode.removeChild(f);},8000); }
 function mapsUrl(addr){ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(addr); }
 
-let state={ access:null, role:"mitarbeiter", openId:null, customers:[], search:"" };
+let state={ access:null, role:"mitarbeiter", openId:null, customers:[], search:"", colSearch:{} };
 function matchesQuery(c,q){ q=(q||"").trim().toLowerCase(); if(!q) return true; return (c.name||"").toLowerCase().includes(q) || (c.address||"").toLowerCase().includes(q); }
 
 /* ===== Daten laden ===== */
@@ -385,13 +393,46 @@ function renderResults(q){
   board.appendChild(grid);
 }
 
+/* Spalten mit eigener Suchleiste */
+const SEARCH_COLS = new Set(["Neu aus CRM"]);
+
+function addColSearch(col,key,list,cnt){
+  const wrap=document.createElement("div"); wrap.className="col-search";
+  wrap.innerHTML='<svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'
+    +'<input type="search" placeholder="In dieser Spalte suchen …" autocomplete="off">'
+    +'<button class="search-clear hide" title="Löschen" type="button">✕</button>';
+  const inp=wrap.querySelector("input"), clr=wrap.querySelector("button");
+  const empty=document.createElement("div"); empty.className="col-empty hide"; empty.textContent="Kein Treffer";
+  const apply=()=>{
+    const q=(state.colSearch[key]||"").trim();
+    let hits=0;
+    list.forEach(o=>{ const ok=matchesQuery(o.c,q); o.el.style.display=ok?"":"none"; if(ok)hits++; });
+    cnt.textContent=q?hits+"/"+list.length:list.length;
+    empty.classList.toggle("hide",hits>0);
+    clr.classList.toggle("hide",!q);
+  };
+  inp.value=state.colSearch[key]||"";
+  inp.addEventListener("input",e=>{ state.colSearch[key]=e.target.value; apply(); });
+  inp.addEventListener("keydown",e=>{ if(e.key==="Escape"){ state.colSearch[key]=""; inp.value=""; apply(); } });
+  clr.onclick=()=>{ state.colSearch[key]=""; inp.value=""; apply(); inp.focus(); };
+  col.appendChild(wrap);
+  return {apply,inp,empty};
+}
+
 function renderBoard(){
   const board=$("#board"); board.className="board"; board.innerHTML="";
+  const active=document.activeElement;
+  const refocus=active&&active.closest&&active.closest(".col-search")?active.value:null;
   COLUMNS.forEach(([key,label,color])=>{
     const list=state.customers.filter(c=>c.status===key);
     const col=document.createElement("div"); col.className="col";
     col.innerHTML='<div class="col-h"><span class="dot" style="background:'+color+'"></span>'+label+'<span class="cnt">'+list.length+'</span></div>';
-    list.forEach(c=>col.appendChild(makeCard(c)));
+    const cnt=col.querySelector(".cnt");
+    const cards=list.map(c=>({c,el:makeCard(c)}));
+    let sb=null;
+    if(SEARCH_COLS.has(key)) sb=addColSearch(col,key,cards,cnt);
+    cards.forEach(o=>col.appendChild(o.el));
+    if(sb){ col.appendChild(sb.empty); sb.apply(); if(refocus!==null&&refocus===sb.inp.value){ sb.inp.focus(); } }
     board.appendChild(col);
   });
 }
