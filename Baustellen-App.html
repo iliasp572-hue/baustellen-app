@@ -110,7 +110,10 @@
   .chip svg{width:12px;height:12px}
   .card .bar{height:6px;background:#eef2f6;border-radius:4px;margin-top:10px;overflow:hidden}
   .card .bar > i{display:block;height:100%;background:var(--accent)}
-  .freigabe-btn{margin-top:10px;width:100%;border:1px solid var(--line);background:#f8fafc;color:var(--muted);font-weight:700;font-size:12.5px;padding:7px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:6px}
+  .card{position:relative}
+.card-del{position:absolute;top:8px;right:8px;width:26px;height:26px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;line-height:1;display:grid;place-items:center;padding:0}
+.card-del:hover{background:#fee2e2}
+.freigabe-btn{margin-top:10px;width:100%;border:1px solid var(--line);background:#f8fafc;color:var(--muted);font-weight:700;font-size:12.5px;padding:7px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:6px}
   .freigabe-btn:hover{border-color:#a78bfa;color:#6d28d9}
   .freigabe-btn.on{background:var(--accent-l);border-color:#86efac;color:#166534}
 
@@ -266,6 +269,7 @@ const CONFIG = {
   GET_URL:  "https://hook.eu2.make.com/9gj1j5y1ep3zfgyww8mj60pon4lbuhfd",
   SAVE_URL: "https://hook.eu2.make.com/uf4gr5b22a0x9sdpdp4nv5lpbjp475qn",
   PLAN_URL: "https://hook.eu2.make.com/rh4trtwbt6iti8efl5tseygomjs7j917",
+  DEL_URL:  "https://hook.eu2.make.com/lph662moo1sopvj5k9u96b0w1gulb9qc",
   CODE_ADMIN: "7894",   // voller Zugriff
   CODE_MIT:   "1234"    // nur freigegebene Kunden
 };
@@ -371,6 +375,16 @@ function makeCard(c){
     fb.innerHTML=(c.released?'✓ Freigegeben':'Für Mitarbeiter freigeben');
     fb.onclick=(e)=>{ e.stopPropagation(); toggleFreigabe(c); };
     card.appendChild(fb);
+  }
+  if(state.access==="admin"&&c.status==="Neu aus CRM"){
+    const xb=document.createElement("button"); xb.className="card-del"; xb.title="Karte löschen"; xb.textContent="✕";
+    xb.onclick=(e)=>{ e.stopPropagation();
+      if(!confirm('Karte "'+c.name+'" wirklich löschen?\nKarte und Materialliste werden entfernt. Das kann nicht rückgängig gemacht werden.')) return;
+      beacon(CONFIG.DEL_URL+"?id="+encodeURIComponent(c.id)+"&mats="+encodeURIComponent((c.materials||[]).map(m=>m.recId).join(",")));
+      state.customers=state.customers.filter(x=>x.id!==c.id);
+      renderDashboard(); toast("Karte gelöscht");
+    };
+    card.appendChild(xb);
   }
   card.onclick=()=>openDetail(c.id);
   return card;
