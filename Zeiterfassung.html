@@ -108,6 +108,8 @@
   .e-time{font-size:13.5px;color:var(--muted);font-weight:600;min-width:120px}
   .e-std{margin-left:auto;font-weight:800;font-size:15px;min-width:56px;text-align:right}
   .e-edit{border:1px solid var(--line);background:#f8fafc;border-radius:9px;width:32px;height:32px;display:grid;place-items:center;color:var(--muted)}
+.e-del{border:1px solid #fecaca;background:#fef2f2;border-radius:9px;width:32px;height:32px;display:grid;place-items:center;color:#dc2626;font-weight:700;font-size:13px;padding:0}
+.e-del:hover{background:#fee2e2}
   .e-edit svg{width:14px;height:14px}
 
   .emp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px}
@@ -248,7 +250,8 @@
 /* ================= KONFIG ================= */
 const CONFIG = {
   DATA_URL: "https://hook.eu2.make.com/y9cspba9ridmz97v3gt365xtk61tn3dn",
-  SAVE_URL: "https://hook.eu2.make.com/7t4km2sapacsqmkgri7i50ej05gg6fov"
+  SAVE_URL: "https://hook.eu2.make.com/7t4km2sapacsqmkgri7i50ej05gg6fov",
+  DEL_URL:  "https://hook.eu2.make.com/dj35hfhgqihg2bllcssbqfhx4tkavgqu"
 };
 /* Gesetzliche Grenzen (ArbZG) */
 const MAX_STD = 10, P30 = 6, P45 = 9;
@@ -468,6 +471,7 @@ function entryRow(e, showName){
     +(f.Hinweis?'<span class="chip warn">'+f.Hinweis+'</span>':'')
     +'<span class="e-std">'+(t==="Arbeit"?fmtStd(Number(f.Stunden)||0)+' h':'—')+'</span>'
     +'<button class="e-edit" data-rec="'+e.id+'" title="Bearbeiten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>'
+    +'<button class="e-del" data-rec="'+e.id+'" title="Eintrag löschen">✕</button>'
     +'</div>';
 }
 function renderMeine(){
@@ -522,6 +526,20 @@ function bindEdit(scope){
   $$(scope+" .e-edit").forEach(b=>b.onclick=()=>{
     const rec=ENTRIES.find(e=>e.id===b.dataset.rec);
     if(rec) startEdit(rec);
+  });
+  $$(scope+" .e-del").forEach(b=>b.onclick=async()=>{
+    const rec=ENTRIES.find(e=>e.id===b.dataset.rec); if(!rec) return;
+    const dat=(rec.fields.Datum||"").split("-").reverse().join(".");
+    if(!confirm("Eintrag vom "+dat+" wirklich löschen?")) return;
+    b.disabled=true;
+    try{
+      const r=await fetch(CONFIG.DEL_URL+"?"+new URLSearchParams({code:CODE, recId:rec.id}).toString(),{cache:"no-store"});
+      const d=await r.json().catch(()=>({}));
+      if(d&&d.ok){
+        if(editRecId===rec.id) cancelEdit();
+        ENTRIES=ENTRIES.filter(e=>e.id!==rec.id); renderAll(); toast("Eintrag gelöscht ✓");
+      } else { b.disabled=false; toast("Löschen fehlgeschlagen.",true); }
+    }catch(err){ b.disabled=false; toast("Keine Verbindung.",true); }
   });
 }
 function exportCSV(){
