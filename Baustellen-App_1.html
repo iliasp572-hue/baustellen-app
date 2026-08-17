@@ -78,6 +78,14 @@
   .col-h{display:flex;align-items:center;gap:8px;padding:4px 6px 10px;font-weight:700;font-size:13px;color:#475569}
   .col-h .dot{width:9px;height:9px;border-radius:50%}
   .col-h .cnt{margin-left:auto;background:#fff;border:1px solid var(--line);color:var(--muted);font-size:12px;border-radius:999px;padding:1px 8px;font-weight:700}
+  .col-search{position:relative;display:flex;align-items:center;margin:0 2px 10px}
+  .col-search .search-ic{position:absolute;left:9px;width:14px;height:14px;color:var(--muted);pointer-events:none}
+  .col-search input{width:100%;padding:7px 26px 7px 29px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;background:var(--panel);color:var(--ink);-webkit-appearance:none;box-sizing:border-box}
+  .col-search input:focus{outline:none;border-color:var(--primary)}
+  .col-search input::-webkit-search-cancel-button{display:none}
+  .col-search .search-clear{position:absolute;right:4px;border:0;background:transparent;color:var(--muted);font-size:12px;cursor:pointer;padding:3px 5px;border-radius:6px;line-height:1}
+  .col-search .search-clear:hover{background:#f1f5f9}
+  .col-empty{color:var(--muted);font-size:12.5px;text-align:center;padding:10px 4px}
   .emp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:16px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(15,23,42,.05);transition:transform .08s,box-shadow .12s}
   .emp-grid .card{margin-bottom:0}
@@ -102,7 +110,10 @@
   .chip svg{width:12px;height:12px}
   .card .bar{height:6px;background:#eef2f6;border-radius:4px;margin-top:10px;overflow:hidden}
   .card .bar > i{display:block;height:100%;background:var(--accent)}
-  .freigabe-btn{margin-top:10px;width:100%;border:1px solid var(--line);background:#f8fafc;color:var(--muted);font-weight:700;font-size:12.5px;padding:7px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:6px}
+  .card{position:relative}
+.card-del{position:absolute;top:8px;right:8px;width:26px;height:26px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;line-height:1;display:grid;place-items:center;padding:0}
+.card-del:hover{background:#fee2e2}
+.freigabe-btn{margin-top:10px;width:100%;border:1px solid var(--line);background:#f8fafc;color:var(--muted);font-weight:700;font-size:12.5px;padding:7px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:6px}
   .freigabe-btn:hover{border-color:#a78bfa;color:#6d28d9}
   .freigabe-btn.on{background:var(--accent-l);border-color:#86efac;color:#166534}
 
@@ -185,6 +196,8 @@
   .pop .wa{color:#25D366}
 
   @media(max-width:820px){ .grid2{grid-template-columns:1fr} .role button{padding:7px 10px} .brand span.full{display:none} }
+.at-link{display:inline-flex;align-items:center;gap:7px;margin-top:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:9px;padding:8px 12px;font-size:13px;font-weight:600;text-decoration:none}
+.at-link:active{opacity:.7}
 </style>
 </head>
 <body>
@@ -258,6 +271,7 @@ const CONFIG = {
   GET_URL:  "https://hook.eu2.make.com/9gj1j5y1ep3zfgyww8mj60pon4lbuhfd",
   SAVE_URL: "https://hook.eu2.make.com/uf4gr5b22a0x9sdpdp4nv5lpbjp475qn",
   PLAN_URL: "https://hook.eu2.make.com/rh4trtwbt6iti8efl5tseygomjs7j917",
+  DEL_URL:  "https://hook.eu2.make.com/lph662moo1sopvj5k9u96b0w1gulb9qc",
   CODE_ADMIN: "7894",   // voller Zugriff
   CODE_MIT:   "1234"    // nur freigegebene Kunden
 };
@@ -288,7 +302,7 @@ function toast(t,bad){ const el=$("#toast"); el.textContent=t; el.className="toa
 function beacon(u){ const f=document.createElement("iframe"); f.style.cssText="display:none"; f.src=u; document.body.appendChild(f); setTimeout(()=>{if(f.parentNode)f.parentNode.removeChild(f);},8000); }
 function mapsUrl(addr){ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(addr); }
 
-let state={ access:null, role:"mitarbeiter", openId:null, customers:[], search:"" };
+let state={ access:null, role:"mitarbeiter", openId:null, customers:[], search:"", colSearch:{} };
 function matchesQuery(c,q){ q=(q||"").trim().toLowerCase(); if(!q) return true; return (c.name||"").toLowerCase().includes(q) || (c.address||"").toLowerCase().includes(q); }
 
 /* ===== Daten laden ===== */
@@ -364,6 +378,16 @@ function makeCard(c){
     fb.onclick=(e)=>{ e.stopPropagation(); toggleFreigabe(c); };
     card.appendChild(fb);
   }
+  if(state.access==="admin"&&c.status==="Neu aus CRM"){
+    const xb=document.createElement("button"); xb.className="card-del"; xb.title="Karte löschen"; xb.textContent="✕";
+    xb.onclick=(e)=>{ e.stopPropagation();
+      if(!confirm('Karte "'+c.name+'" wirklich löschen?\nKarte und Materialliste werden entfernt. Das kann nicht rückgängig gemacht werden.')) return;
+      beacon(CONFIG.DEL_URL+"?id="+encodeURIComponent(c.id)+"&mats="+encodeURIComponent((c.materials||[]).map(m=>m.recId).join(",")));
+      state.customers=state.customers.filter(x=>x.id!==c.id);
+      renderDashboard(); toast("Karte gelöscht");
+    };
+    card.appendChild(xb);
+  }
   card.onclick=()=>openDetail(c.id);
   return card;
 }
@@ -385,13 +409,46 @@ function renderResults(q){
   board.appendChild(grid);
 }
 
+/* Spalten mit eigener Suchleiste */
+const SEARCH_COLS = new Set(["Neu aus CRM"]);
+
+function addColSearch(col,key,list,cnt){
+  const wrap=document.createElement("div"); wrap.className="col-search";
+  wrap.innerHTML='<svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'
+    +'<input type="search" placeholder="In dieser Spalte suchen …" autocomplete="off">'
+    +'<button class="search-clear hide" title="Löschen" type="button">✕</button>';
+  const inp=wrap.querySelector("input"), clr=wrap.querySelector("button");
+  const empty=document.createElement("div"); empty.className="col-empty hide"; empty.textContent="Kein Treffer";
+  const apply=()=>{
+    const q=(state.colSearch[key]||"").trim();
+    let hits=0;
+    list.forEach(o=>{ const ok=matchesQuery(o.c,q); o.el.style.display=ok?"":"none"; if(ok)hits++; });
+    cnt.textContent=q?hits+"/"+list.length:list.length;
+    empty.classList.toggle("hide",hits>0);
+    clr.classList.toggle("hide",!q);
+  };
+  inp.value=state.colSearch[key]||"";
+  inp.addEventListener("input",e=>{ state.colSearch[key]=e.target.value; apply(); });
+  inp.addEventListener("keydown",e=>{ if(e.key==="Escape"){ state.colSearch[key]=""; inp.value=""; apply(); } });
+  clr.onclick=()=>{ state.colSearch[key]=""; inp.value=""; apply(); inp.focus(); };
+  col.appendChild(wrap);
+  return {apply,inp,empty};
+}
+
 function renderBoard(){
   const board=$("#board"); board.className="board"; board.innerHTML="";
+  const active=document.activeElement;
+  const refocus=active&&active.closest&&active.closest(".col-search")?active.value:null;
   COLUMNS.forEach(([key,label,color])=>{
     const list=state.customers.filter(c=>c.status===key);
     const col=document.createElement("div"); col.className="col";
     col.innerHTML='<div class="col-h"><span class="dot" style="background:'+color+'"></span>'+label+'<span class="cnt">'+list.length+'</span></div>';
-    list.forEach(c=>col.appendChild(makeCard(c)));
+    const cnt=col.querySelector(".cnt");
+    const cards=list.map(c=>({c,el:makeCard(c)}));
+    let sb=null;
+    if(SEARCH_COLS.has(key)) sb=addColSearch(col,key,cards,cnt);
+    cards.forEach(o=>col.appendChild(o.el));
+    if(sb){ col.appendChild(sb.empty); sb.apply(); if(refocus!==null&&refocus===sb.inp.value){ sb.inp.focus(); } }
     board.appendChild(col);
   });
 }
@@ -426,7 +483,7 @@ function renderDetail(){
       +'<div class="plan-actions"><a class="btn" href="'+CONFIG.PLAN_URL+"?b="+encodeURIComponent(c.id)+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Öffnen</a>'
       +'<button class="btn green" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Teilen</button></div>';
   } else {
-    planHtml='<div class="drop"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div style="margin-top:8px">Noch kein Belegungsplan.<br><span style="font-size:12.5px">'+(admin?'Im Büro (Airtable) beim Feld „Belegungsplan" hochladen.':'Frag im Büro nach dem Belegungsplan.')+'</span></div></div>';
+    planHtml='<div class="drop"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div style="margin-top:8px">Noch kein Belegungsplan.<br><span style="font-size:12.5px">'+(admin?'Über den blauen Airtable-Link oben hochladen (Feld „Belegungsplan").':'Frag im Büro nach dem Belegungsplan.')+'</span></div></div>';
   }
 
   const simple=!isBuero;
@@ -477,8 +534,9 @@ function renderDetail(){
   const addrHtml = c.address
     ? '<a href="'+mapsUrl(c.address)+'" target="_blank" rel="noopener" title="In Google Maps öffnen">📍 '+esc(c.address)+'</a>'
     : '';
+  const atHtml=admin?'<a class="at-link" href="https://airtable.com/appRZcrBEMQDbVHfA/tblJWsBxa3DbaGXOS/'+c.id+'" target="_blank" rel="noopener">&#128247; Bilder &amp; Karte in Airtable &ouml;ffnen</a>':'';
   $("#detailBody").innerHTML=
-    '<div class="d-head"><div class="row1"><div><h2>'+esc(c.name)+'</h2><div class="addr">'+addrHtml+(c.date?(addrHtml?' · ':'')+'Termin: '+esc(c.date):'')+'</div></div>'+statusCtrl+'</div>'+freigabeCtrl+'</div>'
+    '<div class="d-head"><div class="row1"><div><h2>'+esc(c.name)+'</h2><div class="addr">'+addrHtml+(c.date?(addrHtml?' · ':'')+'Termin: '+esc(c.date):'')+'</div></div>'+statusCtrl+'</div>'+atHtml+freigabeCtrl+'</div>'
     +'<div class="grid2"><div class="box"><h4>Belegungsplan</h4>'+planHtml+'</div>'
     +'<div class="box"><h4>Übersicht</h4><div class="tiles">'
     +'<div class="tile"><div class="k">Gepackt</div><div class="v">'+s.packed+'<small>/'+s.rel+'</small></div><div class="prog"><i style="width:'+pct+'%"></i></div></div>'
