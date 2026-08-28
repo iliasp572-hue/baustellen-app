@@ -147,7 +147,7 @@ function analyse(text){
   if(!rows.length){ res.leer=true; return res; }
 
   var belege={}, jahrMax=0, maxDatum="", eingaenge=[], vostOhne=[], dupZ={}, aufwandOhne=[];
-  res.psText=false; res.psKonto=false;
+  res.psText=false; res.psKonto=false; res.umb={};
   rows.forEach(function(r){
     var konto=r.KONTO_NR||"", gkto=r.GKTO_NR||"", nr=r.BELEG_NR||"";
     var soll=num(r.SOLL), ust=num(r.UST), vost=num(r.VOST), netto=num(r.HABEN), satz=num(r.UST_SATZ);
@@ -157,7 +157,13 @@ function analyse(text){
       jahrMax=Math.max(jahrMax,qq.j);
       var key=qq.j+"|"+qq.q;
       var Q=res.quartale[key]||(res.quartale[key]={jahr:qq.j,q:qq.q,ust:0,vost:0,umb:0,erl19:0,bankBis:""});
-      if(konto==="1766" && gkto==="1776"){ Q.ust+=soll; Q.umb++; }
+      if(konto==="1766" && gkto==="1776"){
+        Q.ust+=soll; Q.umb++;
+        /* Merken, wann die fällige USt dieser Rechnung umgebucht wurde – das steuert das Quartal,
+           nicht das Datum der Erlösbuchung (Lexware bucht den Erlös zum Rechnungsdatum). */
+        if(nr){ var U=res.umb[nr]||(res.umb[nr]={betrag:0,q:key,datum:r.BELEG_DAT}); U.betrag+=soll;
+                if(soll>0){ U.q=key; U.datum=r.BELEG_DAT; } }
+      }
       Q.vost+=vost;
       if(ERLOES.test(gkto) && satz===19) Q.erl19+=soll;
       if(konto==="1202"||gkto==="1202"){ var yd=ymd(r.BELEG_DAT); if(yd>Q.bankBis) Q.bankBis=yd; }
@@ -293,15 +299,23 @@ function abgleich(res,rg){
     else if(Math.abs(B.ust-R.steuer)>0.02)
       funde.push({typ:"rgsteuer",nr:R.nr,q:R.q,txt:"Rechnung <b class='bad'>"+R.nr+"</b>"+wer+": Steuerbetrag laut Rechnungsliste <b>"+eur(R.steuer)+"</b>, im Journal <b>"+eur(B.ust)+"</b> – prüfen, ob der richtige Steuersatz gebucht wurde"});
 
-    /* Ist-Versteuerung: der Umsatz gehört in das Quartal, in dem das Geld kam */
-    var zq=qk(R.bezahlt);
-    if(zq && B.erlQ && zq!==B.erlQ){
-      var steuerlich=R.steuer>0.005 || B.ust>0.005;
-      funde.push({typ:steuerlich?"istq":"istq0", nr:R.nr, q:B.erlQ, q2:zq,
-        txt:"Rechnung <b"+(steuerlich?" class='bad'":"")+">"+R.nr+"</b>"+wer+": als Erlös gebucht am "+(B.erlDat||"?")+" (<b>"+qName(B.erlQ)+"</b>), bezahlt wurde sie am <b>"+R.bezahlt+"</b> (<b>"+qName(zq)+"</b>)."+
-             (steuerlich? " Bei Ist-Versteuerung zählt der Zahlungseingang – <b class='bad'>prüfen, in welches Quartal die "+eur(R.steuer||B.ust)+" Umsatzsteuer gehört</b>, und die Buchung ggf. umdatieren."
-                        : " Ohne Umsatzsteuer (0 %) ändert sich an der Anmeldung nichts – nur fürs Aufzeichnen relevant.")});
+    /* Ist-Versteuerung: maßgeblich ist der Zahlungseingang. Lexware bucht den Erlös zum Rechnungsdatum
+       und steuert das USt-Quartal über die Umbuchung 1766 → 1776 zum Zahlungsdatum – deshalb wird die
+       Umbuchung geprüft, nicht das Datum der Erlösbuchung. */
+    var zq=qk(R.bezahlt), steuer=R.steuer>0.005?R.steuer:B.ust;
+    if(zq && steuer>0.005){
+      var U=res.umb[R.nr];
+      if(!U || U.betrag<0.005)
+        funde.push({typ:"umbfehlt",nr:R.nr,q:zq,q2:B.erlQ,
+          txt:"Rechnung <b class='bad'>"+R.nr+"</b>"+wer+" wurde am <b>"+R.bezahlt+"</b> bezahlt, aber die <b class='bad'>fällige Umsatzsteuer von "+eur(steuer)+" ist nie umgebucht</b> worden (1766 → 1776). Damit fehlt sie in der Anmeldung – in Lexware nachholen."});
+      else if(U.q!==zq)
+        funde.push({typ:"umbq",nr:R.nr,q:U.q,q2:zq,
+          txt:"Rechnung <b class='bad'>"+R.nr+"</b>"+wer+": bezahlt am <b>"+R.bezahlt+"</b> ("+qName(zq)+"), die fällige Umsatzsteuer von <b>"+eur(steuer)+"</b> wurde aber am "+U.datum+" umgebucht (<b class='bad'>"+qName(U.q)+"</b>). Bei Ist-Versteuerung zählt der Zahlungseingang – <b>Datum der Umbuchung prüfen</b>."});
     }
+    /* Ohne Umsatzsteuer: nur Hinweis, in welcher Anmeldung der Umsatz auftaucht */
+    else if(zq && B.erlQ && zq!==B.erlQ)
+      funde.push({typ:"istq0",nr:R.nr,q:B.erlQ,q2:zq,
+        txt:"Rechnung "+R.nr+wer+" (0 % USt): als Erlös gebucht am "+(B.erlDat||"?")+" ("+qName(B.erlQ)+"), Geld kam am <b>"+R.bezahlt+"</b> ("+qName(zq)+"). <b>Die Zahllast ändert das nicht.</b> Bei Ist-Versteuerung gehört der Umsatz aber in die Anmeldung des Zahlungsquartals – kurz gegen die Umsatzsumme in Lexware halten."});
   });
   return funde;
 }
