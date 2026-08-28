@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>USt-Prüfstand – Syrink</title>
+<style>
+:root{
+  --tinte:#101820; --papier:#f2efe6; --karte:#ffffff;
+  --stahl:#5a6675; --linie:#d8d2c2;
+  --rot:#c0392b; --gelb:#b8860b; --gruen:#1f7a4d; --blau:#1e4f7a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--papier);color:var(--tinte);
+  font-family:"Segoe UI",system-ui,sans-serif;font-size:15px;line-height:1.5;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.wrap{max-width:980px;margin:0 auto;padding:24px 18px 80px}
+h1{font-size:26px;margin:0 0 2px;letter-spacing:-.3px}
+.sub{color:var(--stahl);margin:0 0 22px;font-size:14px}
+.drops{display:grid;grid-template-columns:3fr 2fr;gap:12px}
+@media(max-width:640px){.drops{grid-template-columns:1fr}}
+.drop{border:2px dashed var(--linie);background:var(--karte);border-radius:10px;
+  padding:26px 18px;text-align:center;cursor:pointer;transition:.15s;display:block}
+.drop:hover,.drop.hot{border-color:var(--blau);background:#eef4fa}
+.drop.done{border-style:solid;border-color:var(--gruen);background:#f2faf5}
+.drop b{font-size:16px}
+.drop small{display:block;color:var(--stahl);margin-top:6px}
+.drop .status{display:block;margin-top:6px;font-size:13px;color:var(--gruen);font-weight:700}
+input[type=file]{display:none}
+
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:18px 0 0;
+  background:var(--karte);border:1px solid var(--linie);border-radius:10px;padding:12px 14px}
+.controls label{font-weight:700;font-size:14px}
+.controls select{font:inherit;padding:6px 10px;border:1px solid var(--linie);border-radius:7px;background:#fff}
+.controls button{font:inherit;font-weight:700;padding:7px 16px;border:0;border-radius:7px;
+  background:var(--blau);color:#fff;cursor:pointer;margin-left:auto}
+.controls button:hover{filter:brightness(1.1)}
+
+.verdict{margin:26px 0 8px;border-radius:10px;padding:20px 22px;color:#fff}
+.verdict.stop{background:var(--rot)}
+.verdict.warn{background:var(--gelb)}
+.verdict.go{background:var(--gruen)}
+.verdict .t{font-size:24px;font-weight:700;letter-spacing:-.3px}
+.verdict .s{opacity:.95;margin-top:4px}
+
+.card{background:var(--karte);border:1px solid var(--linie);border-radius:10px;
+  padding:16px 18px;margin:14px 0}
+.card h2{font-size:16px;margin:0 0 4px;display:flex;align-items:center;gap:9px}
+.dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+.d-rot{background:var(--rot)} .d-gelb{background:var(--gelb)} .d-gruen{background:var(--gruen)}
+.card .why{color:var(--stahl);font-size:13.5px;margin:0 0 10px}
+ul.f{margin:0;padding-left:18px} ul.f li{margin:5px 0}
+.mono{font-family:"Consolas",monospace}
+.bad{color:var(--rot);font-weight:700}
+.ok{color:var(--gruen);font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--linie)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--stahl)}
+td.n{text-align:right;font-family:"Consolas",monospace;white-space:nowrap}
+tr.qsel td{background:#eef4fa;font-weight:700}
+.pill{display:inline-block;padding:1px 8px;border-radius:20px;font-size:12px;font-weight:700}
+.p-zahl{background:#fdeceb;color:var(--rot)}
+.p-erst{background:#e7f4ec;color:var(--gruen)}
+footer{color:var(--stahl);font-size:12.5px;margin-top:28px;border-top:1px solid var(--linie);padding-top:12px}
+
+#printhead{display:none}
+@media print{
+  body{background:#fff;font-size:12.5px}
+  .wrap{max-width:none;padding:0}
+  .drops,.controls,.sub{display:none}
+  #printhead{display:block;border:1px solid var(--linie);border-radius:8px;padding:12px 14px;margin:0 0 14px}
+  #printhead h2{margin:0 0 4px;font-size:15px}
+  #printhead p{margin:2px 0;font-size:12.5px}
+  .card{break-inside:avoid;box-shadow:none}
+  .verdict{margin-top:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>USt-Prüfstand</h1>
+<p class="sub">Journal-Export aus Lexware hineinziehen. Läuft komplett im Browser, es wird nichts hochgeladen.</p>
+
+<div class="drops">
+<label class="drop" id="drop">
+  <b>Journal-CSV hier ablegen oder klicken</b>
+  <small>Lexware → Export → Journal, Zeitraum ganzes Jahr, Datei <span class="mono">Export_Journal.csv</span></small>
+  <span class="status" id="dropStat"></span>
+  <input type="file" id="file" accept=".csv,text/csv">
+</label>
+<label class="drop" id="dropR">
+  <b>Rechnungsliste dazu legen (optional)</b>
+  <small>Export der Ausgangsrechnungen. Damit findet der Prüfstand auch Rechnungen, die <b>komplett fehlen</b>.</small>
+  <span class="status" id="dropRStat"></span>
+  <input type="file" id="fileR" accept=".csv,text/csv">
+</label>
+</div>
+
+<div class="controls" id="ctrl" hidden>
+  <label for="zeit">Zeitraum:</label>
+  <select id="zeit"></select>
+  <button id="druck" type="button">Prüfbericht drucken</button>
+</div>
+
+<div id="printhead"></div>
+<div id="out"></div>
+
+<footer>Der Prüfstand liest nur Zahlen. Er ersetzt keine Steuerberatung und trifft keine steuerliche Entscheidung.</footer>
+</div>
+
+<script>
+/* ===== ANALYSE-START ===== */
+function parseCSV(text){
+  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+  var kopf=text.slice(0,text.indexOf("\n")>-1?text.indexOf("\n"):text.length);
+  var sep=(kopf.match(/;/g)||[]).length>=(kopf.match(/,/g)||[]).length?";":",";
+  var rows=[],row=[],cur="",q=false;
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; }
+      else cur+=c;
+    } else if(c==='"'){ q=true; }
+    else if(c===sep){ row.push(cur); cur=""; }
+    else if(c==='\n'){ row.push(cur); cur=""; rows.push(row); row=[]; }
+    else if(c!=='\r'){ cur+=c; }
+  }
+  if(cur.length||row.length){ row.push(cur); rows.push(row); }
+  if(!rows.length) return [];
+  var head=rows[0].map(function(h){return h.trim();});
+  return rows.slice(1).filter(function(r){return r.length>=head.length-2 && r.join("").trim()!=="";})
+    .map(function(r){ var o={}; head.forEach(function(h,i){o[h]=(r[i]||"").trim();}); return o; });
+}
+function num(s){ if(!s) return 0; var v=parseFloat(String(s).replace(/[^\d,.\-]/g,"").replace(/\./g,"").replace(",",".")); return isNaN(v)?0:v; }
+function eur(v){ return v.toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €"; }
+function quartal(d){ var p=String(d).split("."); var m=parseInt(p[1],10); if(!m) return null;
+  return {j:parseInt(p[2],10), q:m<=3?1:m<=6?2:m<=9?3:4}; }
+function qk(d){ var q=quartal(d); return (q&&q.j)?q.j+"|"+q.q:null; }
+function qName(key){ if(key==="alle") return "alle Zeiträume"; var p=String(key).split("|"); return "Q"+p[1]+"/"+p[0]; }
+function ymd(d){ var p=String(d).split("."); return p.length===3?p[2]+"-"+("0"+p[1]).slice(-2)+"-"+("0"+p[0]).slice(-2):""; }
+
+var ERLOES=/^(8[0-9]{3})$/;
+
+function analyse(text){
+  var rows=parseCSV(text);
+  var res={zeilen:rows.length,funde:[],quartale:{}};
+  if(!rows.length){ res.leer=true; return res; }
+
+  var belege={}, jahrMax=0, maxDatum="", eingaenge=[], vostOhne=[], dupZ={}, aufwandOhne=[];
+  res.psText=false; res.psKonto=false; res.umb={};
+  rows.forEach(function(r){
+    var konto=r.KONTO_NR||"", gkto=r.GKTO_NR||"", nr=r.BELEG_NR||"";
+    var soll=num(r.SOLL), ust=num(r.UST), vost=num(r.VOST), netto=num(r.HABEN), satz=num(r.UST_SATZ);
+    var qq=quartal(r.BELEG_DAT);
+    if(ymd(r.BELEG_DAT)>maxDatum){ maxDatum=ymd(r.BELEG_DAT); res.maxDatumTxt=r.BELEG_DAT; }
+    if(qq && qq.j){
+      jahrMax=Math.max(jahrMax,qq.j);
+      var key=qq.j+"|"+qq.q;
+      var Q=res.quartale[key]||(res.quartale[key]={jahr:qq.j,q:qq.q,ust:0,vost:0,umb:0,erl19:0,bankBis:""});
+      if(konto==="1766" && gkto==="1776"){
+        Q.ust+=soll; Q.umb++;
+        /* Merken, wann die fällige USt dieser Rechnung umgebucht wurde – das steuert das Quartal,
+           nicht das Datum der Erlösbuchung (Lexware bucht den Erlös zum Rechnungsdatum). */
+        if(nr){ var U=res.umb[nr]||(res.umb[nr]={betrag:0,q:key,datum:r.BELEG_DAT}); U.betrag+=soll;
+                if(soll>0){ U.q=key; U.datum=r.BELEG_DAT; } }
+      }
+      Q.vost+=vost;
+      if(ERLOES.test(gkto) && satz===19) Q.erl19+=soll;
+      if(konto==="1202"||gkto==="1202"){ var yd=ymd(r.BELEG_DAT); if(yd>Q.bankBis) Q.bankBis=yd; }
+    }
+    /* Zahlungsdienstleister: kommt PayPal & Co. im Text vor, gibt es aber kein eigenes Geldkonto dafür? */
+    if(/paypal|klarna|sumup|stripe|mollie/i.test(r.BU_TEXT||"")) res.psText=true;
+    if(/^12[1-9][0-9]$/.test(konto)||/^12[1-9][0-9]$/.test(gkto)||
+       /paypal|klarna|sumup|stripe|mollie/i.test((r.KONTO_BEZ||"")+" "+(r.GKTO_BEZ||""))) res.psKonto=true;
+    if(!nr) return;
+    var B=belege[nr]||(belege[nr]={nr:nr,erloes:0,ust:0,bank:0,neg:false,pos:false,n0:0,n19:0,konten:{},datum:r.BELEG_DAT});
+    /* Lieferanten-Gutschrift (Ausgabenminderung) mit verlinktem Beleg erkennen:
+       Gegenkonto ist ein Aufwandskonto (SKR03 2xxx-4xxx) und ein Beleg ist verlinkt */
+    if(/^[234][0-9]{3}$/.test(gkto) && (r.BELEGVERLINKUNG||"").trim()) B.gsBeleg=true;
+    if(ERLOES.test(gkto)){
+      B.erloes+=soll; B.ust+=ust; B.konten[gkto]=true;
+      if(soll>0 && !B.erlQ){ B.erlQ=qk(r.BELEG_DAT); B.erlDat=r.BELEG_DAT; }
+      if(soll<0) B.neg=true; else if(soll>0) B.pos=true;
+      if(satz===19){ B.n19+=soll;
+        if(soll>0 && Math.abs(ust-netto*0.19)>0.02)
+          res.funde.push({typ:"rechen",nr:nr,q:qk(r.BELEG_DAT),txt:"Rechnung "+nr+": Umsatzsteuer "+eur(ust)+" passt nicht zu netto "+eur(netto)+" (19 % wären "+eur(netto*0.19)+")"});
+      } else B.n0+=soll;
+    }
+    if(konto==="1202") B.bank+=soll;
+  });
+  res.maxDatum=maxDatum;
+
+  rows.forEach(function(r){
+    var konto=r.KONTO_NR||"", nr=r.BELEG_NR||"", soll=num(r.SOLL), vost=num(r.VOST);
+    var beleg=(r.BELEGVERLINKUNG||"").trim();
+    if(konto==="1202" && soll>0){
+      var B=belege[nr];
+      if(!B || (Math.abs(B.erloes)<0.005 && !B.gsBeleg))
+        eingaenge.push({datum:r.BELEG_DAT,betrag:soll,gegen:r.GKTO_BEZ||"",text:(r.BU_TEXT||"").slice(0,60),
+                        privat:/Privateinlage/i.test(r.GKTO_BEZ||"")});
+    }
+    if(vost>0 && !beleg)
+      vostOhne.push({datum:r.BELEG_DAT,betrag:vost,wer:r.GKTO_BEZ||r.KONTO_BEZ||"",nr:nr});
+    /* Ausgabe ohne hinterlegten Beleg: Aufwands-/Wareneingangskonto (SKR03 3xxx/4xxx) im Soll, kein Beleg,
+       ohne die Fälle, die schon in "Vorsteuer ohne Beleg" stehen.
+       Ausgenommen sind Konten, zu denen es systembedingt keine Eingangsrechnung gibt:
+       41xx Personal, 48xx Abschreibungen, 4210 Miete, 4970 Geldverkehr, 43xx/45xx Steuern und Abgaben. */
+    if(/^[34][0-9]{3}$/.test(konto) && !beleg && soll>0 && !(vost>0) &&
+       !/^(41[0-9]{2}|48[0-9]{2}|4210|4970|43[0-9]{2}|45[0-9]{2})$/.test(konto))
+      aufwandOhne.push({datum:r.BELEG_DAT,betrag:soll,was:r.KONTO_BEZ||"",text:(r.BU_TEXT||"").slice(0,40)});
+    if(nr && soll!==0){
+      var k=konto+"|"+(r.GKTO_NR||"")+"|"+r.BELEG_DAT+"|"+r.SOLL+"|"+nr;
+      var D=dupZ[k]||(dupZ[k]={n:0,datum:r.BELEG_DAT,betrag:soll,nr:nr,was:r.KONTO_BEZ||""});
+      D.n++;
+    }
+  });
+  res.eingaenge=eingaenge.sort(function(a,b){return b.betrag-a.betrag;});
+  res.vostOhne=vostOhne.sort(function(a,b){return b.betrag-a.betrag;});
+  res.doppel=Object.keys(dupZ).map(function(k){return dupZ[k];}).filter(function(d){return d.n>1;})
+             .sort(function(a,b){return b.betrag-a.betrag;});
+  res.aufwandOhne=aufwandOhne.sort(function(a,b){return b.betrag-a.betrag;});
+
+  var liste=Object.keys(belege).map(function(k){return belege[k];});
+  res.belege=belege;
+
+  liste.forEach(function(B){
+    var bq=qk(B.datum);
+    if(B.neg && Math.abs(B.erloes)<0.005)
+      res.funde.push({typ:"storno",nr:B.nr,q:bq,txt:"Rechnung "+B.nr+" ist unterm Strich nicht mehr gebucht – storniert und nicht ersetzt. Prüfen, ob das so gewollt ist"});
+    if(B.bank>0 && Math.abs(B.erloes)>0.005 && Math.abs(B.bank-B.erloes)>0.02)
+      res.funde.push({typ:"bank",nr:B.nr,q:bq,txt:"Rechnung "+B.nr+": Erlös "+eur(B.erloes)+" und Zahlungseingang "+eur(B.bank)+" gehen um "+eur(Math.abs(B.bank-B.erloes))+" auseinander"});
+    var ges=B.n0+B.n19;
+    if(B.n0>0 && B.n19>0 && ges>0 && B.n19/ges<0.10)
+      res.funde.push({typ:"split",nr:B.nr,q:bq,txt:"Rechnung "+B.nr+": der 19-%-Anteil ist nur "+eur(B.n19)+" von "+eur(ges)+" – prüfen, ob versehentlich der Steuerbetrag statt des Bruttobetrags gebucht wurde"});
+    if(B.konten["8200"] && B.n0>0)
+      res.funde.push({typ:"konto",nr:B.nr,q:bq,txt:"Rechnung "+B.nr+": Nullsteuer-Anteil liegt auf 8200 (Erlöse) statt 8290 (Erlöse 0 % USt)"});
+  });
+
+  var nrn=liste.filter(function(B){return /^\d{5}$/.test(B.nr) && Math.abs(B.erloes)>0.005;})
+               .map(function(B){return parseInt(B.nr,10);}).sort(function(a,b){return a-b;});
+  if(nrn.length>2){
+    var luecken=[];
+    for(var i=nrn[0];i<=nrn[nrn.length-1];i++) if(nrn.indexOf(i)===-1) luecken.push(i);
+    if(luecken.length) res.luecken=luecken;
+  }
+  res.jahr=jahrMax;
+  return res;
+}
+
+/* Rechnungsliste einlesen: Spalten RG-Datum, RG-Nr., Steuer, Steuerbetrag, Gesamtbetrag, Kategorie, bezahlt am, Firmenname */
+function parseRG(text){
+  var rows=parseCSV(text);
+  if(!rows.length) return null;
+  function feld(o,teil){ for(var k in o){ if(k.toLowerCase().replace(/[\s.\-_]/g,"").indexOf(teil)>-1) return o[k]; } return ""; }
+  /* Lexware exportiert Mischrechnungen als eine Zeile pro Steuersatz (gleiche RG-Nr.,
+     gleicher Gesamtbetrag, unterschiedlicher Steuerbetrag) – deshalb pro RG-Nr. zusammenfassen:
+     Steuerbetraege summieren; Gesamtbetrag nur summieren, wenn die Zeilen unterschiedliche Betraege tragen. */
+  var map={}, reihenfolge=[];
+  rows.forEach(function(r){
+    var nr=String(feld(r,"rgnr")).trim();
+    if(nr==="") return;
+    var brutto=num(feld(r,"gesamtbetrag")), steuer=num(feld(r,"steuerbetrag"));
+    var R=map[nr];
+    if(!R){
+      R=map[nr]={nr:nr, datum:String(feld(r,"rgdatum")).trim(), brutto:brutto, steuer:steuer,
+                 bezahlt:String(feld(r,"bezahltam")).trim(),
+                 firma:String(feld(r,"firmenname")).trim(), q:qk(String(feld(r,"rgdatum")).trim())};
+      reihenfolge.push(nr);
+    } else {
+      R.steuer+=steuer;
+      if(Math.abs(R.brutto-brutto)>0.005) R.brutto+=brutto;
+    }
+  });
+  var liste=reihenfolge.map(function(nr){return map[nr];});
+  return liste.length?liste:null;
+}
+
+/* Abgleich Rechnungsliste gegen Journal */
+function abgleich(res,rg){
+  var funde=[];
+  if(!rg||!res||!res.belege) return funde;
+  var ziffern={};
+  Object.keys(res.belege).forEach(function(nr){ var z=nr.replace(/\D/g,""); if(z) ziffern[z]=res.belege[nr]; });
+  rg.forEach(function(R){
+    var B=res.belege[R.nr]||ziffern[R.nr.replace(/\D/g,"")];
+    var wer=R.firma?" ("+R.firma+")":"";
+    if(!B || Math.abs(B.erloes)<0.005){
+      if(B && B.neg){
+        funde.push({typ:"rgstorno",nr:R.nr,q:R.q,txt:"Rechnung <b class='bad'>"+R.nr+"</b> vom "+R.datum+wer+" über "+eur(R.brutto)+" ist im Journal <b class='bad'>storniert</b>, steht aber noch in der Rechnungsliste – klären, ob die Rechnung gilt, und sie dann neu buchen"});
+      } else if(res.maxDatum && ymd(R.datum)>res.maxDatum){
+        funde.push({typ:"rgneu",nr:R.nr,q:R.q,txt:"Rechnung "+R.nr+" vom "+R.datum+wer+" ist neuer als die letzte Journalbuchung ("+(res.maxDatumTxt||"")+") – vor dem Senden einen <b>frischen Journal-Export</b> ziehen"});
+      } else {
+        funde.push({typ:"rgfehlt",nr:R.nr,q:R.q,txt:"Rechnung <b class='bad'>"+R.nr+"</b> vom "+R.datum+wer+" über <b class='bad'>"+eur(R.brutto)+"</b> steht in der Rechnungsliste, ist aber <b class='bad'>im Journal nicht gebucht</b> – in Lexware nachbuchen, sonst fehlt dieser Umsatz in der Anmeldung"});
+      }
+      return;
+    }
+    if(Math.abs(B.erloes-R.brutto)>0.02)
+      funde.push({typ:"rgbetrag",nr:R.nr,q:R.q,txt:"Rechnung <b class='bad'>"+R.nr+"</b>"+wer+": Rechnungsliste sagt <b>"+eur(R.brutto)+"</b>, im Journal gebucht sind <b>"+eur(B.erloes)+"</b> – Differenz <b class='bad'>"+eur(Math.abs(B.erloes-R.brutto))+"</b>. Die Buchung in Lexware gegen die Rechnung prüfen und korrigieren"});
+    else if(Math.abs(B.ust-R.steuer)>0.02)
+      funde.push({typ:"rgsteuer",nr:R.nr,q:R.q,txt:"Rechnung <b class='bad'>"+R.nr+"</b>"+wer+": Steuerbetrag laut Rechnungsliste <b>"+eur(R.steuer)+"</b>, im Journal <b>"+eur(B.ust)+"</b> – prüfen, ob der richtige Steuersatz gebucht wurde"});
+
+    /* Ist-Versteuerung: maßgeblich ist der Zahlungseingang. Lexware bucht den Erlös zum Rechnungsdatum
+       und steuert das USt-Quartal über die Umbuchung 1766 → 1776 zum Zahlungsdatum – deshalb wird die
+       Umbuchung geprüft, nicht das Datum der Erlösbuchung. */
+    var zq=qk(R.bezahlt), steuer=R.steuer>0.005?R.steuer:B.ust;
+    if(zq && steuer>0.005){
+      var U=res.umb[R.nr];
+      if(!U || U.betrag<0.005)
+        funde.push({typ:"umbfehlt",nr:R.nr,q:zq,q2:B.erlQ,
+          txt:"Rechnung <b class='bad'>"+R.nr+"</b>"+wer+" wurde am <b>"+R.bezahlt+"</b> bezahlt, aber die <b class='bad'>fällige Umsatzsteuer von "+eur(steuer)+" ist nie umgebucht</b> worden (1766 → 1776). Damit fehlt sie in der Anmeldung – in Lexware nachholen."});
+      else if(U.q!==zq)
+        funde.push({typ:"umbq",nr:R.nr,q:U.q,q2:zq,
+          txt:"Rechnung <b class='bad'>"+R.nr+"</b>"+wer+": bezahlt am <b>"+R.bezahlt+"</b> ("+qName(zq)+"), die fällige Umsatzsteuer von <b>"+eur(steuer)+"</b> wurde aber am "+U.datum+" umgebucht (<b class='bad'>"+qName(U.q)+"</b>). Bei Ist-Versteuerung zählt der Zahlungseingang – <b>Datum der Umbuchung prüfen</b>."});
+    }
+    /* Ohne Umsatzsteuer: nur Hinweis, in welcher Anmeldung der Umsatz auftaucht */
+    else if(zq && B.erlQ && zq!==B.erlQ)
+      funde.push({typ:"istq0",nr:R.nr,q:B.erlQ,q2:zq,
+        txt:"Rechnung "+R.nr+wer+" (0 % USt): als Erlös gebucht am "+(B.erlDat||"?")+" ("+qName(B.erlQ)+"), Geld kam am <b>"+R.bezahlt+"</b> ("+qName(zq)+"). <b>Die Zahllast ändert das nicht.</b> Bei Ist-Versteuerung gehört der Umsatz aber in die Anmeldung des Zahlungsquartals – kurz gegen die Umsatzsumme in Lexware halten."});
+  });
+  return funde;
+}
+
+/* Vorsteuer-Sprünge: Quartal gegen Durchschnitt der Vorquartale */
+function vostSpruenge(res){
+  var qs=Object.keys(res.quartale).map(function(k){return res.quartale[k];})
+          .sort(function(a,b){return a.jahr-b.jahr||a.q-b.q;});
+  var warn=[];
+  qs.forEach(function(Q,i){
+    if(i<1) return;
+    var summe=0; for(var j=0;j<i;j++) summe+=qs[j].vost;
+    var schnitt=summe/i;
+    if(schnitt<=0) return;
+    var diff=Q.vost-schnitt, proz=Math.round(Math.abs(diff)/schnitt*100);
+    if(Math.abs(diff)/schnitt>0.5 && Math.abs(diff)>500){
+      var mq=quartal(res.maxDatumTxt||"");
+      var offen=mq && mq.j===Q.jahr && mq.q===Q.q;
+      warn.push({key:Q.jahr+"|"+Q.q, jahr:Q.jahr, q:Q.q, vost:Q.vost, schnitt:schnitt,
+                 hoch:diff>0, proz:proz, offen:offen});
+    }
+  });
+  return warn;
+}
+/* Formale Quartalsprüfungen: USt-Umbuchung vorhanden, Bank bis Quartalsende verbucht */
+function quartalsCheck(res,key){
+  var Q=res.quartale[key]; if(!Q) return [];
+  var raus=[], ende=[null,"-03-31","-06-30","-09-30","-12-31"][Q.q], endeD=Q.jahr+ende;
+  if(Q.erl19>0.005 && !Q.umb)
+    raus.push({stufe:"rot",titel:"Umsatzsteuer nicht umgebucht",
+      txt:"In "+qName(key)+" sind Erlöse mit 19 % gebucht, aber es gibt <b class='bad'>keine Umbuchung 1766 → 1776</b>. Ohne sie steht die fällige Umsatzsteuer nicht in der Anmeldung – <b>vor dem Senden in Lexware nachholen</b>."});
+  /* Bank nur prüfen, wenn das Quartal laut Journal schon vorbei ist */
+  if(Q.bankBis && res.maxDatum>endeD && Q.bankBis<endeD){
+    var p=Q.bankBis.split("-");
+    raus.push({stufe:"rot",titel:"Bankkonto nicht bis zum Quartalsende verbucht",
+      txt:"Die letzte Buchung auf dem Bankkonto 1202 in "+qName(key)+" ist vom <b>"+p[2]+"."+p[1]+"."+p[0]+"</b>, das Quartal endet am <b>"+ende.slice(4)+"."+ende.slice(1,3)+"."+Q.jahr+"</b>. <b class='bad'>Buche die restlichen Kontoumsätze</b>, sonst fehlen Umsätze in der Anmeldung."});
+  }
+  return raus;
+}
+/* ===== ANALYSE-ENDE ===== */
+
+var S={res:null,rg:null,rgFunde:[],filter:"alle",jName:"",rgName:""};
+
+function karte(stufe,titel,warum,inhalt){
+  var d={rot:"d-rot",gelb:"d-gelb",gruen:"d-gruen"}[stufe];
+  return '<div class="card"><h2><span class="dot '+d+'"></span>'+titel+'</h2>'+
+         (warum?'<p class="why">'+warum+'</p>':'')+inhalt+'</div>';
+}
+function imZeitraum(q,q2){ return S.filter==="alle" || q===S.filter || (q2&&q2===S.filter); }
+function imZeitraumD(datum){ return S.filter==="alle" || qk(datum)===S.filter; }
+
+function steuerung(){
+  var ctrl=document.getElementById("ctrl"), sel=document.getElementById("zeit");
+  var keys=Object.keys(S.res.quartale).sort();
+  var opts='<option value="alle">Alle Zeiträume</option>';
+  keys.forEach(function(k){ opts+='<option value="'+k+'"'+(S.filter===k?' selected':'')+'>'+qName(k)+'</option>'; });
+  sel.innerHTML=opts; sel.value=S.filter;
+  ctrl.hidden=false;
+}
+
+function zeichnen(){
+  var res=S.res, out=document.getElementById("out");
+  if(res.leer){ out.innerHTML=karte("gelb","Keine Buchungen gefunden","","<p>Die Datei enthält keine lesbaren Zeilen. Ist es wirklich der Journal-Export?</p>"); return; }
+  steuerung();
+
+  var LEICHT={konto:1,rgneu:1,istq0:1};
+  var alleFunde=res.funde.concat(S.rgFunde).filter(function(f){return imZeitraum(f.q,f.q2);});
+  var schwer=alleFunde.filter(function(f){return !LEICHT[f.typ];});
+  var leicht=alleFunde.filter(function(f){return !!LEICHT[f.typ];});
+  var eingaenge=res.eingaenge.filter(function(e){return imZeitraumD(e.datum);});
+  var vostOhne=res.vostOhne.filter(function(v){return imZeitraumD(v.datum);});
+  var aufOhne=(res.aufwandOhne||[]).filter(function(a){return imZeitraumD(a.datum);});
+  var doppel=res.doppel.filter(function(d){return imZeitraumD(d.datum);});
+  var spruenge=vostSpruenge(res).filter(function(w){return imZeitraum(w.key);});
+  var formal=[];
+  Object.keys(res.quartale).forEach(function(k){
+    if(imZeitraum(k)) formal=formal.concat(quartalsCheck(res,k));
+  });
+
+  var extra=vostOhne.length||doppel.length||spruenge.length||aufOhne.length||
+            eingaenge.some(function(e){return e.privat;});
+  var stufe = (schwer.length||formal.length)?"stop":(leicht.length||res.luecken||extra?"warn":"go");
+  var nStop=schwer.length+formal.length;
+  var zr=qName(S.filter);
+  var txt={stop:["Noch nicht senden",nStop+" Punkt"+(nStop>1?"e":"")+" für "+zr+" "+(nStop>1?"müssen":"muss")+" vorher geklärt werden"],
+           warn:["Senden möglich","Es gibt Hinweise für "+zr+", aber nichts, was die Anmeldung falsch macht"],
+           go:["Alles sauber","Keine Auffälligkeiten ("+zr+", "+res.zeilen+" Buchungszeilen im Journal)"]}[stufe];
+  var html='<div class="verdict '+stufe+'"><div class="t">'+txt[0]+'</div><div class="s">'+txt[1]+'</div></div>';
+
+  if(S.res && !S.rg){
+    html+=karte("gelb","Rechnungsliste fehlt noch",
+      "",
+      "<p>Ohne die Liste der Ausgangsrechnungen kann der Prüfstand <b style='color:var(--rot)'>komplett fehlende Rechnungen nicht erkennen</b>. Die Rechnungsliste oben rechts dazulegen – das ist der wichtigste Abgleich.</p>");
+  }
+
+  formal.forEach(function(F){
+    html+=karte("rot",F.titel,"","<p>"+F.txt+"</p>");
+  });
+
+  if(schwer.length){
+    html+=karte("rot","Das muss vor dem Senden geklärt werden",
+      "Jeder dieser Punkte verändert die Umsatzsteuer oder fehlt in der Buchhaltung.",
+      "<ul class='f'>"+schwer.map(function(f){return "<li>"+f.txt+"</li>";}).join("")+"</ul>");
+  }
+  if(leicht.length){
+    html+=karte("gelb","Hinweise zur Ordnung",
+      "<b>Diese Punkte ändern die Umsatzsteuer nicht.</b> Sie sind nur uneinheitlich oder ungenau gebucht — für den Prüfer schwerer nachvollziehbar. Du kannst senden, solltest sie aber bei Gelegenheit aufräumen.",
+      "<ul class='f'>"+leicht.map(function(f){return "<li>"+f.txt+"</li>";}).join("")+"</ul>");
+  }
+  if(res.luecken && S.filter==="alle"){
+    html+=karte("gelb","Lücken im Rechnungsnummernkreis",
+      "Über das ganze Journal geprüft. Normal, solange Rechnungen erst nach Zahlungseingang nach Lexware wandern. Trotzdem gut zu wissen: Der Prüfer fragt so etwas.",
+      "<p class='mono'>"+res.luecken.join(" · ")+"</p>");
+  }
+
+  spruenge.forEach(function(w){
+    html+=karte("gelb","Vorsteuer-Sprung in Q"+w.q+"/"+w.jahr,
+      "<b>Genau auf solche Sprünge reagiert das Risikomanagementsystem des Finanzamts.</b> Es vergleicht jede Voranmeldung mit den Vorquartalen.",
+      "<p>Die Vorsteuer liegt mit <b>"+eur(w.vost)+"</b> um <b style='color:var(--rot)'>"+w.proz+" % "+(w.hoch?"über":"unter")+"</b> dem Durchschnitt der Vorquartale ("+eur(w.schnitt)+"). "+
+      (w.hoch?"Vor dem Senden die <b>größten neuen Eingangsrechnungen</b> auf korrekte Erfassung prüfen und die Belege griffbereit halten – bei so einem Anstieg fordert das Finanzamt oft Belege an.":
+              "Prüfen, ob <b>alle Eingangsrechnungen des Quartals erfasst</b> sind – ein so starker Rückgang deutet oft auf vergessene Belege hin.")+
+      (w.offen?" <b>Achtung:</b> Dieses Quartal ist im Export noch nicht vollständig (letzte Buchung "+(res.maxDatumTxt||"")+"), der Vergleich hinkt entsprechend.":"")+"</p>");
+  });
+
+  function tab(kopf,zeilen){ return "<table><tr>"+kopf.map(function(h,i){return "<th"+(i?" style='text-align:right'":"")+">"+h+"</th>";}).join("")+"</tr>"+zeilen+"</table>"; }
+
+  if(eingaenge.length){
+    var priv=eingaenge.filter(function(e){return e.privat;});
+    var z=eingaenge.slice(0,12).map(function(e){
+      return "<tr><td class='mono'>"+e.datum+"</td><td>"+e.gegen+(e.privat?" <span class='pill p-zahl'>Bareinzahlung</span>":"")+
+             "</td><td class='n'>"+eur(e.betrag)+"</td></tr>"; }).join("");
+    html+=karte(priv.length?"gelb":"gruen","Geld auf dem Konto ohne Rechnung dahinter",
+      "<b>Das ist der Blick des Prüfers.</b> Er vergleicht deine Kontoauszüge mit den Erlösen. Für jeden Eingang ohne Rechnung musst du erklären können, woher das Geld kam. Lieferanten-Gutschriften mit verlinktem Beleg sind hier bereits herausgefiltert."+
+      (priv.length?" Besonders im Blick: <b style='color:var(--rot)'>"+priv.length+" Einzahlung"+(priv.length>1?"en":"")+" als Privateinlage</b> — dafür brauchst du einen belegbaren Ursprung.":""),
+      tab(["Datum","Gebucht als","Betrag"],z)+
+      (eingaenge.length>12?"<p class='why' style='margin-top:8px'>… und "+(eingaenge.length-12)+" weitere kleinere Eingänge</p>":""));
+  }
+
+  if(vostOhne.length){
+    var sum=vostOhne.reduce(function(a,b){return a+b.betrag;},0);
+    html+=karte("gelb","Vorsteuer ohne hinterlegten Beleg",
+      "Ohne Eingangsrechnung <b>streicht der Prüfer die Vorsteuer</b>. Genau danach wurde im Juli gefragt. Betroffen: <b>"+eur(sum)+"</b>.",
+      tab(["Datum","Lieferant","Vorsteuer"],vostOhne.slice(0,12).map(function(v){
+        return "<tr><td class='mono'>"+v.datum+"</td><td>"+v.wer+"</td><td class='n'>"+eur(v.betrag)+"</td></tr>";}).join("")));
+  }
+
+  if(aufOhne.length){
+    var sumA=aufOhne.reduce(function(a,b){return a+b.betrag;},0);
+    html+=karte("gelb","Ausgaben ohne hinterlegten Beleg",
+      "Hier wurde <b>keine Vorsteuer gezogen</b>, es ist also kein Umsatzsteuer-Problem. Der Prüfer will trotzdem einen Nachweis sehen. Betroffen: <b>"+aufOhne.length+" Buchungen über "+eur(sumA)+"</b>. Löhne, Abschreibungen, Miete, Steuern und Bankgebühren sind hier <b>schon herausgefiltert</b> – für die gibt es ohnehin keine Eingangsrechnung.",
+      tab(["Datum","Ausgabe","Betrag"],aufOhne.slice(0,10).map(function(a){
+        return "<tr><td class='mono'>"+a.datum+"</td><td>"+a.was+"</td><td class='n'>"+eur(a.betrag)+"</td></tr>";}).join(""))+
+      (aufOhne.length>10?"<p class='why' style='margin-top:8px'>… und "+(aufOhne.length-10)+" weitere</p>":""));
+  }
+
+  if(res.psText && !res.psKonto){
+    html+=karte("gelb","Kein eigenes Konto für PayPal &amp; Co.",
+      "",
+      "<p>Im Journal tauchen <b>PayPal, Klarna oder SumUp nur als Text</b> auf, ein eigenes Geldkonto dafür gibt es nicht. Das ist in Ordnung, solange <b>jeder</b> dieser Vorgänge über die Bank läuft. <b class='bad'>Prüfe für den gewählten Zeitraum</b>, ob es PayPal-Zahlungen gab, die nie auf dem Bankkonto erschienen sind (z. B. aus einem PayPal-Guthaben bezahlt) – die fehlen dann komplett in der Buchhaltung.</p>");
+  }
+
+  if(doppel.length){
+    html+=karte("gelb","Verdacht auf Doppelbuchung",
+      "Gleicher Betrag, gleicher Tag, gleiche Belegnummer, mehrfach gebucht. Kann eine echte Rate sein — einmal draufschauen.",
+      tab(["Datum","Beleg","Betrag"],doppel.slice(0,10).map(function(d){
+        return "<tr><td class='mono'>"+d.datum+"</td><td>"+d.nr+" · "+d.was+" <span class='pill p-zahl'>"+d.n+"×</span></td><td class='n'>"+eur(d.betrag)+"</td></tr>";}).join("")));
+  }
+
+  var qs=Object.keys(res.quartale).map(function(k){return res.quartale[k];})
+          .sort(function(a,b){return a.jahr-b.jahr||a.q-b.q;});
+  if(qs.length){
+    var t="<table><tr><th>Zeitraum</th><th>Fällige USt</th><th>Vorsteuer</th><th>Ergebnis</th><th></th></tr>";
+    qs.forEach(function(Q){
+      var s=Q.ust-Q.vost, sel=(S.filter===Q.jahr+"|"+Q.q)?" class='qsel'":"";
+      t+="<tr"+sel+"><td><b>Q"+Q.q+"/"+Q.jahr+"</b></td><td class='n'>"+eur(Q.ust)+"</td><td class='n'>"+eur(Q.vost)+
+         "</td><td class='n'>"+eur(Math.abs(s))+"</td><td><span class='pill "+(s>0?"p-zahl'>Zahllast":"p-erst'>Erstattung")+"</span></td></tr>";
+    });
+    t+="</table>";
+    html+=karte("gruen","Was in der Anmeldung stehen müsste",
+      "Näherung aus dem Journal, nach vereinnahmten Entgelten. Weicht Lexware deutlich ab, stimmt eine der beiden Seiten nicht."+(S.filter!=="alle"?" Der gewählte Zeitraum ist markiert.":""),t);
+  }
+  out.innerHTML=html;
+
+  var ph=document.getElementById("printhead");
+  var jetzt=new Date();
+  ph.innerHTML="<h2>USt-Prüfstand – Nachweis der Vorabprüfung</h2>"+
+    "<p><b>Geprüfter Zeitraum:</b> "+zr+" &nbsp;·&nbsp; <b>Ergebnis:</b> "+txt[0]+"</p>"+
+    "<p><b>Journal:</b> "+(S.jName||"–")+" ("+res.zeilen+" Buchungszeilen, letzte Buchung "+(res.maxDatumTxt||"–")+")"+
+    (S.rgName?" &nbsp;·&nbsp; <b>Rechnungsliste:</b> "+S.rgName+" ("+(S.rg?S.rg.length:0)+" Rechnungen)":" &nbsp;·&nbsp; <b>Rechnungsliste:</b> nicht abgeglichen")+"</p>"+
+    "<p><b>Prüflauf:</b> "+jetzt.toLocaleDateString("de-DE")+", "+jetzt.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})+" Uhr · Prüfung lief lokal im Browser, ohne Datenübertragung.</p>";
+}
+
+var drop=document.getElementById("drop"), file=document.getElementById("file");
+var dropR=document.getElementById("dropR"), fileR=document.getElementById("fileR");
+function lesen(f){ var r=new FileReader(); r.onload=function(){
+  S.res=analyse(r.result); S.jName=f.name;
+  document.getElementById("dropStat").textContent="✓ "+f.name+" geladen ("+S.res.zeilen+" Zeilen)";
+  drop.classList.add("done");
+  S.rgFunde=abgleich(S.res,S.rg);
+  zeichnen(); }; r.readAsText(f,"UTF-8"); }
+function lesenR(f){ var r=new FileReader(); r.onload=function(){
+  S.rg=parseRG(r.result); S.rgName=f.name;
+  document.getElementById("dropRStat").textContent=S.rg?("✓ "+f.name+" geladen ("+S.rg.length+" Rechnungen)"):"Keine Rechnungen erkannt – Spalten prüfen (RG-Nr., Gesamtbetrag …)";
+  if(S.rg) dropR.classList.add("done");
+  if(S.res){ S.rgFunde=abgleich(S.res,S.rg); zeichnen(); } }; r.readAsText(f,"UTF-8"); }
+
+file.addEventListener("change",function(){ if(file.files[0]) lesen(file.files[0]); });
+fileR.addEventListener("change",function(){ if(fileR.files[0]) lesenR(fileR.files[0]); });
+[[drop,lesen],[dropR,lesenR]].forEach(function(p){
+  var el=p[0], fn=p[1];
+  ["dragenter","dragover"].forEach(function(e){ el.addEventListener(e,function(ev){ev.preventDefault();el.classList.add("hot");}); });
+  ["dragleave","drop"].forEach(function(e){ el.addEventListener(e,function(ev){ev.preventDefault();el.classList.remove("hot");}); });
+  el.addEventListener("drop",function(ev){ if(ev.dataTransfer.files[0]) fn(ev.dataTransfer.files[0]); });
+});
+document.getElementById("zeit").addEventListener("change",function(){ S.filter=this.value; zeichnen(); });
+document.getElementById("druck").addEventListener("click",function(){ window.print(); });
+</script>
+</body>
+</html>
