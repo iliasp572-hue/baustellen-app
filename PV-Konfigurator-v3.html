@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syrink PV-Konfigurator v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nacht:#16202E;
+  --gold:#FFB300;
+  --tinte:#1C1B1B;
+  --papier:#FFFFFF;
+  --nebel:#F1F3F6;
+  --linie:#DFE4EA;
+  --gruen:#1E8E3E;
+  --rot:#C62828;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--nebel);color:var(--tinte);
+  font-family:"Open Sans",system-ui,sans-serif;font-size:16px;line-height:1.5;
+  padding-bottom:96px}
+h1,h2,h3,.zahl{font-family:"Montserrat",system-ui,sans-serif}
+header{display:block;background:var(--nacht);color:#fff;padding:18px 16px}
+header h1{margin:0;font-size:19px;letter-spacing:.2px}
+header p{margin:4px 0 0;font-size:13px;color:#AEBACB}
+main{max-width:980px;margin:0 auto;padding:16px}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+fieldset:disabled{opacity:.45;pointer-events:none}
+.karte{background:var(--papier);border:1px solid var(--linie);border-radius:10px;
+  padding:16px;margin-bottom:14px}
+.karte h2{margin:0 0 12px;font-size:16px}
+.karte h3{margin:12px 0 4px;font-size:13px;color:#5A6472;text-transform:uppercase;letter-spacing:.5px}
+.reihe{display:flex;flex-wrap:wrap;gap:12px}
+.feld{flex:1 1 150px;min-width:130px}
+label{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+input,select{width:100%;padding:10px;border:1px solid var(--linie);border-radius:8px;
+  font:inherit;background:#fff}
+input:focus,select:focus{outline:3px solid rgba(255,179,0,.45);border-color:var(--gold)}
+.schalter{display:flex;align-items:center;gap:10px;padding:9px 0;font-size:15px;font-weight:400}
+.schalter input{width:22px;height:22px;flex:0 0 auto}
+.schalter .alt{font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:13px;color:#5A6472;border-bottom:2px solid var(--linie);padding:6px 4px}
+td{padding:8px 4px;border-bottom:1px solid var(--linie);vertical-align:top}
+td.r,th.r{text-align:right;white-space:nowrap}
+.eknum{width:92px;padding:5px;text-align:right;font-size:14px}
+.warn{color:var(--rot);font-weight:700}
+.alt{color:#5A6472;font-style:italic}
+.summe{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--linie)}
+.summe b{font-family:"Montserrat",sans-serif}
+.summe.gross{border-bottom:none;font-size:19px;padding-top:12px}
+.leiste{position:fixed;left:0;right:0;bottom:0;background:var(--nacht);color:#fff;
+  padding:10px 16px;display:flex;gap:14px;align-items:center;justify-content:space-between;
+  box-shadow:0 -6px 18px rgba(0,0,0,.18)}
+.leiste div{display:flex;flex-direction:column}
+.leiste span{font-size:12px;color:#AEBACB}
+.leiste b{font-family:"Montserrat",sans-serif;font-size:19px}
+.ampel{padding:5px 12px;border-radius:999px;font-weight:700;font-size:14px;
+  font-family:"Montserrat",sans-serif}
+.gruen{background:var(--gruen);color:#fff}
+.rot{background:var(--rot);color:#fff}
+.gelb{background:var(--gold);color:#1C1B1B}
+.hinweis{background:#FFF6E0;border-left:4px solid var(--gold);padding:10px 12px;
+  border-radius:0 8px 8px 0;font-size:14px;margin-bottom:14px}
+.hinweis.fehler{background:#FDECEC;border-left-color:var(--rot);font-size:16px;font-weight:700;color:#8E1B1B}
+.hinweis.ok{background:#E8F5EC;border-left-color:var(--gruen)}
+.hinweis button{margin-left:10px;padding:6px 12px;border:0;border-radius:8px;background:var(--nacht);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.gold{color:#9A6A00;font-weight:700}
+.klein{font-size:12px;color:#5A6472;font-weight:400}
+.treffer{position:relative}
+.treffer div{background:#fff;border:1px solid var(--linie);border-top:0;padding:8px 10px;cursor:pointer;font-size:14px}
+.treffer div:hover{background:var(--nebel)}
+.treffer div b{font-family:"Montserrat",sans-serif}
+.haupt{background:var(--gold);color:#1C1B1B;border:0;border-radius:10px;padding:14px 22px;font:inherit;font-size:17px;font-weight:700;cursor:pointer;font-family:"Montserrat",sans-serif}
+.haupt:disabled{opacity:.5;cursor:wait}
+.ergebnis{margin-top:14px;padding:14px;border-radius:10px;background:#E8F5EC;border-left:4px solid var(--gruen);font-size:15px}
+.ergebnis.fehler{background:#FDECEC;border-left-color:var(--rot);font-weight:700;color:#8E1B1B}
+.ergebnis a{display:inline-block;margin:8px 10px 0 0;padding:10px 14px;border-radius:8px;background:var(--nacht);color:#fff;text-decoration:none;font-weight:600}
+.ergebnis a.senden{background:var(--gruen)}
+@media (max-width:640px){ .feld{flex:1 1 100%} .eknum{width:80px} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PV-Konfigurator</h1>
+  <p>Komponenten wählen, Gewinn sofort sehen · Preise live aus dem PV-Katalog</p>
+</header>
+
+<main>
+  <div class="hinweis" id="status">⏳ <b>Katalog wird geladen …</b></div>
+
+<fieldset id="alles" disabled>
+  <div class="karte">
+    <h2>Kunde</h2>
+    <div class="reihe">
+      <div class="feld" style="flex:2 1 260px">
+        <label for="suche">Bestandskunde suchen <span class="klein">(HubSpot · Name oder E-Mail)</span></label>
+        <input id="suche" type="search" placeholder="z. B. Sharma oder sharma@…" autocomplete="off">
+        <div id="treffer" class="treffer"></div>
+      </div>
+      <div class="feld" style="flex:1 1 200px">
+        <label for="dealId">HubSpot-Deal</label>
+        <select id="dealId"><option value="">Neuer Deal wird angelegt</option></select>
+      </div>
+    </div>
+    <div class="reihe" style="margin-top:12px">
+      <div class="feld"><label for="kname">Name *</label><input id="kname" autocomplete="off"></div>
+      <div class="feld"><label for="kmail">E-Mail *</label><input id="kmail" type="email" autocomplete="off"></div>
+      <div class="feld"><label for="anrede">Anrede im Angebot</label><input id="anrede" value="Sehr geehrte Damen und Herren,"></div>
+    </div>
+    <div class="reihe" style="margin-top:12px">
+      <div class="feld"><label for="strasse">Straße, Nr.</label><input id="strasse" autocomplete="off"></div>
+      <div class="feld"><label for="plzort">PLZ Ort</label><input id="plzort" autocomplete="off"></div>
+      <div class="feld"><label for="kdnr">Kundennummer <span class="klein">(optional)</span></label><input id="kdnr" autocomplete="off"></div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <h2>Anlage</h2>
+    <div class="reihe">
+      <div class="feld">
+        <label for="modul">Modul</label>
+        <select id="modul"></select>
+      </div>
+      <div class="feld">
+        <label for="modAnz">Module (Stück)</label>
+        <input id="modAnz" type="number" min="0" step="1" value="21">
+      </div>
+      <div class="feld">
+        <label for="modWp">Wp je Modul <span class="klein">(aus Katalog, änderbar)</span></label>
+        <input id="modWp" type="number" min="0" step="5" value="0">
+      </div>
+    </div>
+    <div class="reihe" style="margin-top:12px">
+      <div class="feld">
+        <label for="msSchraeg">Montagesystem Schrägdach</label>
+        <select id="msSchraeg"></select>
+      </div>
+      <div class="feld">
+        <label for="kwpSchraeg">davon Schrägdach (kWp)</label>
+        <input id="kwpSchraeg" type="number" min="0" step="0.01" value="4.09">
+      </div>
+      <div class="feld">
+        <label for="msFlach">Montagesystem Flachdach</label>
+        <select id="msFlach"></select>
+      </div>
+      <div class="feld">
+        <label for="kwpFlach">davon Flachdach (kWp)</label>
+        <input id="kwpFlach" type="number" min="0" step="0.01" value="5.46">
+      </div>
+    </div>
+    <div class="reihe" style="margin-top:12px">
+      <div class="feld">
+        <label for="wr">Wechselrichter</label>
+        <select id="wr"></select>
+      </div>
+      <div class="feld">
+        <label for="speicher">Speicher</label>
+        <select id="speicher"></select>
+      </div>
+      <div class="feld">
+        <label for="spAnz">Speichermodule (Stück)</label>
+        <input id="spAnz" type="number" min="0" step="1" value="1">
+      </div>
+      <div class="feld">
+        <label for="staffelHand">€/kWp Montage überschreiben</label>
+        <input id="staffelHand" type="number" min="0" step="1" placeholder="leer = Staffel">
+      </div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <h2>Extras</h2>
+    <div id="extras"></div>
+  </div>
+
+  <div class="karte">
+    <h2>Positionen</h2>
+    <p class="klein" style="margin:0 0 8px">EK je Einheit kommt aus dem Katalog. Hier eingetippte EK gelten <b>nur für dieses Angebot</b> und verändern den Katalog nicht.</p>
+    <table>
+      <thead>
+        <tr><th>Pos</th><th>Menge</th><th>Bezeichnung</th><th class="r">VK gesamt</th><th class="r">EK je Einheit</th></tr>
+      </thead>
+      <tbody id="pos"></tbody>
+    </table>
+  </div>
+
+  <div class="karte">
+    <h2>Summe fürs Angebot</h2>
+    <div id="summen"></div>
+    <div class="reihe" style="margin-top:14px">
+      <div class="feld">
+        <label for="rabatt">Rabatt (€)</label>
+        <input id="rabatt" type="number" min="0" step="10" value="0">
+      </div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <h2>Was bleibt übrig</h2>
+    <div id="kosten"></div>
+    <div class="reihe" style="margin-top:14px" id="stunden"></div>
+    <div class="reihe" style="margin-top:14px">
+      <div class="feld">
+        <label for="ziel">Zielgewinn (€)</label>
+        <input id="ziel" type="number" min="0" step="100" value="4500">
+      </div>
+    </div>
+  </div>
+
+  <div class="karte" id="erstellenKarte">
+    <h2>Angebot erstellen</h2>
+    <p class="klein" style="margin:0 0 10px">Erzeugt <b>Angebotsnummer + Google-Doc</b>, legt den HubSpot-Deal an/aktualisiert ihn und meldet in Slack. <b>Es wird nichts an den Kunden gesendet</b> – das machst du danach über den Senden-Link.</p>
+    <button type="button" class="haupt" id="btnErstellen">📄 Angebot erstellen</button>
+    <div id="ergebnis"></div>
+  </div>
+</fieldset>
+</main>
+
+<div class="leiste">
+  <div><span>Anlage</span><b id="lKwp">0 kWp</b></div>
+  <div><span>Gewinn</span><b id="lGewinn">0 €</b></div>
+  <span class="ampel" id="lAmpel">–</span>
+</div>
+
+<script>
+/* ============================================================
+   Syrink PV-Konfigurator v3 – Preise, Staffel und Kostenarten
+   kommen LIVE aus Airtable (Make-Szenario "PV Katalog: Daten").
+   Keine festen Preise mehr im Skript.
+   ============================================================ */
+const CONFIG = {
+  DATEN:   "https://hook.eu2.make.com/4jc0nue3i98jesk3xvh6gl1xlscqw7gv",
+  ANGEBOT: "https://hook.eu2.make.com/ij7w4hu2fg4mwssit53d6a2mangbb7c7",
+  KEY:     "pvk9syrink"
+};
+
+/* Feld-IDs der Airtable-Tabellen (Base appRZcrBEMQDbVHfA) */
+const F = {
+  kat: { name:"fldZKRshSWTobcpm0", kategorie:"fldYWDj11G2im36KU", einheit:"fldk5YVbMXSH8wg9N",
+         vk:"fldUAhb00NCrRE06i", ek:"fld892eBToqrxj0Od", mwst:"fldgR1X41hwhcwOgo",
+         langtext:"fldL9BQpZiZ8HIpjF", datenblatt:"fldj11aKvXEIK6ldg", alt:"fldhUMD9M19WmBwJF",
+         sort:"fld4e1aCZXB8IthDB", lager:"fld4oXE8askNmfbpo" },
+  st:  { stufe:"fldnBri7hKombb9Dq", von:"fldwOaBfZI723oDHP", bis:"fldjLpg2WHQ2KMEb2", eur:"fldZNdRTROvptkvCh" },
+  ko:  { name:"fldHkoxtMxOI8kD25", basis:"fldzdUUiEhwmBhQgt", wert:"fldkr5lmNc3ea1FAK", aktiv:"fldUQZVURfM92XgwE" }
+};
+
+let KATALOG = [];      /* {id,name,kat,eh,vk,ek,mwst,alt,sort,langtext,datenblatt} */
+let STAFFEL = [];      /* {von,bis,eur,stufe} */
+let KOSTEN  = [];      /* {id,name,basis,wert} */
+const EK_LOKAL = {};   /* nur für dieses Angebot, überschreibt Katalog-EK lokal */
+let bereit = false;
+
+const eur = n => n.toLocaleString("de-DE",{style:"currency",currency:"EUR"});
+const num = n => n.toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2});
+const $   = id => document.getElementById(id);
+const v   = id => { const e = $(id); return e ? (parseFloat(e.value) || 0) : 0; };
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function status(cls, html){ const s = $("status"); s.className = "hinweis " + cls; s.innerHTML = html; }
+
+/* ---------- Daten laden ---------- */
+function laden(){
+  bereit = false;
+  $("alles").disabled = true;
+  status("", "⏳ <b>Katalog wird geladen …</b>");
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 30000);
+  fetch(CONFIG.DATEN, {signal: ctrl.signal, cache: "no-store"})
+    .then(r => { if(!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
+    .then(txt => {
+      let j = null;
+      try { j = JSON.parse(txt); } catch(e) { throw new Error("Antwort nicht lesbar"); }
+      if (!j || !j.katalog || !Array.isArray(j.katalog.records)) throw new Error("PV-Katalog fehlt in der Antwort");
+      if (!j.staffel || !Array.isArray(j.staffel.records)) throw new Error("Montage-Staffel fehlt in der Antwort");
+      if (!j.kosten  || !Array.isArray(j.kosten.records))  throw new Error("Kostenarten fehlen in der Antwort");
+      if (!j.katalog.records.length) throw new Error("PV-Katalog ist leer (keine freigegebenen Artikel)");
+      uebernehmen(j);
+    })
+    .catch(e => {
+      status("fehler", "⛔ <b>Katalog nicht erreichbar</b> – Eingaben gesperrt, es wird nicht mit alten Zahlen gerechnet. <span class='klein'>(" + esc(e.message) + ")</span> <button type='button' onclick='laden()'>Neu laden</button>");
+    })
+    .finally(() => clearTimeout(t));
+}
+
+function uebernehmen(j){
+  KATALOG = j.katalog.records.map(r => {
+    const f = r.fields || {};
+    return { id:r.id, name:f[F.kat.name] || "(ohne Namen)", kat:f[F.kat.kategorie] || "", eh:f[F.kat.einheit] || "Stk",
+             vk:Number(f[F.kat.vk]) || 0, ek:Number(f[F.kat.ek]) || 0, mwst:Number(f[F.kat.mwst]) || 0,
+             alt:!!f[F.kat.alt], sort:Number(f[F.kat.sort]) || 9999, langtext:f[F.kat.langtext] || "", datenblatt:f[F.kat.datenblatt] || "",
+             lager:(Array.isArray(f[F.kat.lager]) && f[F.kat.lager][0]) || "" };
+  }).sort((a,b) => a.sort - b.sort || a.name.localeCompare(b.name));
+  STAFFEL = j.staffel.records.map(r => { const f = r.fields || {}; return { stufe:f[F.st.stufe] || "", von:Number(f[F.st.von]) || 0, bis:Number(f[F.st.bis]) || 0, eur:Number(f[F.st.eur]) || 0 }; })
+    .sort((a,b) => a.von - b.von);
+  KOSTEN = j.kosten.records.map(r => { const f = r.fields || {}; return { id:r.id, name:f[F.ko.name] || "", basis:f[F.ko.basis] || "pauschal", wert:Number(f[F.ko.wert]) || 0 }; });
+
+  aufbauen();
+  bereit = true;
+  $("alles").disabled = false;
+  status("ok", "✅ <b>Katalog geladen:</b> " + KATALOG.length + " Artikel · " + STAFFEL.length + " Staffelstufen · " + KOSTEN.length + " Kostenarten. Nur Artikel mit Status <span class='gold'>Freigegeben</span>.");
+  rechnen();
+}
+
+/* ---------- Oberfläche aus dem Katalog bauen ---------- */
+const nachKat = k => KATALOG.filter(a => a.kat === k);
+
+function fuelleSelect(id, liste, vorauswahl){
+  const s = $(id);
+  s.innerHTML = '<option value="">keiner</option>' + liste.map(a => '<option value="'+a.id+'">'+esc(a.name)+' · '+eur(a.vk)+'</option>').join("");
+  if (vorauswahl) s.value = vorauswahl;
+}
+function wpAusName(name){ const m = String(name).match(/(\d{3,4})\s?W(p|\b)/i); return m ? parseInt(m[1],10) : 0; }
+
+function aufbauen(){
+  const module   = nachKat("Modul");
+  const wrs      = nachKat("Wechselrichter");
+  const speicher = nachKat("Speicher");
+  const montage  = nachKat("Montagesystem");
+  const flach    = montage.filter(a => /flat|flach/i.test(a.name));
+  const schraeg  = montage.filter(a => !/flat|flach/i.test(a.name));
+
+  fuelleSelect("modul", module, module[0] ? module[0].id : "");
+  fuelleSelect("wr", wrs, wrs[0] ? wrs[0].id : "");
+  fuelleSelect("speicher", speicher, speicher[0] ? speicher[0].id : "");
+  fuelleSelect("msSchraeg", schraeg.length ? schraeg : montage, schraeg[0] ? schraeg[0].id : "");
+  fuelleSelect("msFlach", flach.length ? flach : montage, flach[0] ? flach[0].id : "");
+  $("modWp").value = module[0] ? wpAusName(module[0].name) : 0;
+
+  /* Extras als Schalter: Elektromaterial, Sonstige Leistung, Wallbox, Zählerschrank */
+  const gruppen = [["Elektromaterial","Elektromaterial"],["Sonstige Leistung","Sonstige Leistungen"],["Wallbox","Wallbox"],["Zählerschrank","Zählerschrank"]];
+  let h = "";
+  gruppen.forEach(g => {
+    const l = nachKat(g[0]); if(!l.length) return;
+    h += '<h3>'+esc(g[1])+'</h3>';
+    l.forEach(a => {
+      h += '<label class="schalter"><input type="checkbox" data-x="'+a.id+'" checked> '+esc(a.name)+
+           ' <span class="klein">'+eur(a.vk)+' / '+esc(a.eh)+(a.mwst===19?' · <b>19 % MwSt.</b>':'')+'</span>'+
+           (a.alt?' <span class="alt">(alternative Position)</span>':'')+'</label>';
+    });
+  });
+  $("extras").innerHTML = h || '<p class="klein">Keine Extras im Katalog freigegeben.</p>';
+
+  /* Stundenfelder je Kostenart "pro Std" */
+  $("stunden").innerHTML = KOSTEN.filter(k => k.basis === "pro Std").map(k =>
+    '<div class="feld"><label for="std_'+k.id+'">Stunden '+esc(k.name)+' <span class="klein">('+eur(k.wert)+'/Std)</span></label>'+
+    '<input id="std_'+k.id+'" type="number" min="0" step="0.5" value="3"></div>').join("");
+}
+
+/* Modulwechsel → Wp aus dem Namen übernehmen */
+document.addEventListener("change", e => {
+  if (e.target.id === "modul") { const a = KATALOG.find(x => x.id === e.target.value); $("modWp").value = a ? wpAusName(a.name) : 0; }
+});
+
+/* ---------- Rechnen ---------- */
+function staffelPreis(kwp){
+  const hand = v("staffelHand");
+  if (hand > 0) return {eur:hand, quelle:"von Hand"};
+  for (const s of STAFFEL) if (kwp >= s.von && kwp <= s.bis) return {eur:s.eur, quelle:s.stufe || ("bis "+s.bis+" kWp")};
+  return {eur:0, quelle:"keine Staffel für "+num(kwp)+" kWp hinterlegt"};
+}
+const art = id => KATALOG.find(a => a.id === id);
+function pos(a, menge){ return { id:a.id, menge, eh:a.eh, name:a.name, vkEinheit:a.vk, ekEinheit:(a.id in EK_LOKAL ? EK_LOKAL[a.id] : a.ek), mwst:a.mwst, alternativ:a.alt, langtext:a.langtext, lager:a.lager }; }
+
+function bauen(){
+  const kwp = v("modAnz") * v("modWp") / 1000;
+  const st  = staffelPreis(kwp);
+  const zeilen = [];
+  zeilen.push({ id:"montage", menge:kwp, eh:"kWp", name:"Lieferung und Montage Photovoltaikanlage – betriebsfertig", quelle:st.quelle, vkEinheit:st.eur, ekEinheit:0, fest:true, mwst:0, langtext:MONTAGE_TEXT, lager:"" });
+
+  const m = art($("modul").value);      if (m && v("modAnz") > 0) zeilen.push(pos(m, v("modAnz")));
+  const s1 = art($("msSchraeg").value); if (s1 && v("kwpSchraeg") > 0) zeilen.push(pos(s1, v("kwpSchraeg")));
+  const s2 = art($("msFlach").value);   if (s2 && v("kwpFlach") > 0) zeilen.push(pos(s2, v("kwpFlach")));
+  const w = art($("wr").value);         if (w) zeilen.push(pos(w, 1));
+  const sp = art($("speicher").value);  if (sp && v("spAnz") > 0) zeilen.push(pos(sp, v("spAnz")));
+  document.querySelectorAll("#extras input[type=checkbox]:checked").forEach(cb => { const a = art(cb.getAttribute("data-x")); if (a) zeilen.push(pos(a, 1)); });
+  return {kwp, zeilen};
+}
+
+function rechnen(){
+  if (!bereit) return;
+  const {kwp, zeilen} = bauen();
+  let netto0 = 0, netto19 = 0, ekSumme = 0, alt = 0, ekFehlt = 0;
+  const tb = $("pos");
+  tb.innerHTML = "";
+
+  zeilen.forEach((z, i) => {
+    const vkGes = z.vkEinheit * z.menge;
+    const ekGes = z.ekEinheit * z.menge;
+    if (z.alternativ) { alt += vkGes; }
+    else {
+      if (z.mwst === 19) netto19 += vkGes; else netto0 += vkGes;
+      ekSumme += ekGes;
+      if (!z.fest && z.ekEinheit === 0) ekFehlt++;
+    }
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td>'+String(i+1).padStart(3,"0")+'</td>'+
+      '<td>'+num(z.menge)+' '+esc(z.eh)+'</td>'+
+      '<td'+(z.alternativ?' class="alt"':'')+'>'+esc(z.name)+(z.quelle?' <span class="klein">('+esc(z.quelle)+')</span>':'')+(z.mwst===19?' <b>19 %</b>':'')+'</td>'+
+      '<td class="r">'+(z.alternativ?'('+eur(vkGes)+')':eur(vkGes))+'</td>'+
+      '<td class="r"></td>';
+    const zelle = tr.lastElementChild;
+    if (z.fest) { zelle.textContent = "–"; }
+    else {
+      const inp = document.createElement("input");
+      inp.type = "number"; inp.min = "0"; inp.step = "0.01";
+      inp.className = "eknum"; inp.value = z.ekEinheit || "";
+      inp.placeholder = "EK?";
+      if (!z.ekEinheit) inp.classList.add("warn");
+      inp.addEventListener("input", () => { EK_LOKAL[z.id] = parseFloat(inp.value) || 0; rechnenOhneTabelle(); });
+      zelle.appendChild(inp);
+    }
+    tb.appendChild(tr);
+  });
+  summenUndKosten(kwp, netto0, netto19, ekSumme, alt, ekFehlt);
+}
+
+/* EK-Tippen: Summen neu, Tabelle stehen lassen (sonst springt der Cursor raus) */
+function rechnenOhneTabelle(){
+  const {kwp, zeilen} = bauen();
+  let netto0 = 0, netto19 = 0, ekSumme = 0, alt = 0, ekFehlt = 0;
+  zeilen.forEach(z => {
+    const vkGes = z.vkEinheit * z.menge, ekGes = z.ekEinheit * z.menge;
+    if (z.alternativ) { alt += vkGes; return; }
+    if (z.mwst === 19) netto19 += vkGes; else netto0 += vkGes;
+    ekSumme += ekGes; if (!z.fest && z.ekEinheit === 0) ekFehlt++;
+  });
+  document.querySelectorAll("#pos .eknum").forEach(i => i.classList.toggle("warn", !(parseFloat(i.value) > 0)));
+  summenUndKosten(kwp, netto0, netto19, ekSumme, alt, ekFehlt);
+}
+
+function summenUndKosten(kwp, netto0, netto19, ekSumme, alt, ekFehlt){
+  const rabatt   = v("rabatt");
+  const nettoVor = netto0 + netto19;
+  const netto    = nettoVor - rabatt;
+  const ust19    = netto19 * 0.19;
+  const brutto   = netto + ust19;
+
+  $("summen").innerHTML =
+    zeile("Alternative Positionen", "("+eur(alt)+")") +
+    zeile("Nettobetrag ohne Rabatt", eur(nettoVor)) +
+    zeile("Rabatt", "-"+eur(rabatt)) +
+    zeile("Nettobetrag", eur(netto)) +
+    zeile("zzgl. 19 % MwSt.", eur(ust19)) +
+    zeile("Gesamtsumme", eur(brutto), true);
+
+  let kosten = ekSumme, h = zeile("Material-EK" + (ekFehlt ? " <span class='warn'>"+ekFehlt+" Position(en) ohne EK</span>" : ""), eur(ekSumme));
+  KOSTEN.forEach(k => {
+    let betrag = 0, text = esc(k.name);
+    if (k.basis === "pro kWp")      { betrag = k.wert * kwp;              text += " ("+num(kwp)+" kWp × "+eur(k.wert)+")"; }
+    else if (k.basis === "pro Std") { const std = v("std_"+k.id); betrag = k.wert * std; text += " ("+num(std)+" Std × "+eur(k.wert)+")"; }
+    else                            { betrag = k.wert;                    text += " (pauschal)"; }
+    kosten += betrag; h += zeile(text, eur(betrag));
+  });
+  const gewinn = netto - kosten;
+  const marge  = netto > 0 ? gewinn / netto * 100 : 0;
+  h += zeile("Kosten gesamt", eur(kosten)) + zeile("Gewinn", eur(gewinn) + " · " + marge.toFixed(1).replace(".",",") + " %", true);
+  $("kosten").innerHTML = h;
+
+  const ziel = v("ziel"), a = $("lAmpel");
+  $("lKwp").textContent = num(kwp) + " kWp";
+  $("lGewinn").textContent = eur(gewinn);
+  a.className = "ampel " + (gewinn >= ziel ? "gruen" : gewinn >= ziel * 0.8 ? "gelb" : "rot");
+  a.textContent = ekFehlt ? "EK fehlt" : gewinn >= ziel ? "Ziel erreicht" : gewinn >= ziel*0.8 ? "knapp" : "zu wenig";
+}
+function zeile(l, r, gross){ return '<div class="summe'+(gross?' gross':'')+'"><span>'+l+'</span><b>'+r+'</b></div>'; }
+
+document.addEventListener("input", e => {
+  if (e.target.closest("main") && !e.target.classList.contains("eknum") && !e.target.closest("#erstellenKarte") && e.target.id !== "suche") rechnen();
+});
+
+/* ============================================================
+   Langtext für Pos 001 (Leistungsumfang) – 1:1 aus Angebot 10580
+   ============================================================ */
+const MONTAGE_TEXT =
+"Leistungsumfang (Festpreis)\n\nLieferung und fachgerechte Montage der Photovoltaikanlage, bestehend aus:\n" +
+"• Montage der Solarmodule inkl. geeigneter Unterkonstruktion auf der vorgesehenen Dachfläche\n" +
+"• Vollständige Installation der Anlage\n" +
+"• Inbetriebnahme und Übergabe der betriebsbereiten Photovoltaikanlage\n\n" +
+"Inklusive Leistungen\n" +
+"• Anmeldung der Photovoltaikanlage beim zuständigen Energieversorger / Netzbetreiber\n" +
+"• Erstellung und Einreichung aller erforderlichen Unterlagen für:\n   ◦ Netzanschluss\n   ◦ Marktstammdatenregister\n\n" +
+"Ausführung & Qualitätssicherung\n" +
+"• Umsetzung gemäß geltender VDE-Vorschriften und DIN-Normen\n" +
+"• Koordination und Durchführung durch zertifiziertes Fachpersonal\n" +
+"• Einhaltung der technischen Anschlussbedingungen (TAB) des zuständigen Netzbetreibers";
+
+/* ============================================================
+   Kunde: HubSpot-Suche über das Angebots-Szenario (mode=search / deals)
+   ============================================================ */
+let sucheTimer = null;
+$("suche").addEventListener("input", () => {
+  clearTimeout(sucheTimer);
+  const q = $("suche").value.trim();
+  if (q.length < 2) { $("treffer").innerHTML = ""; return; }
+  sucheTimer = setTimeout(() => {
+    $("treffer").innerHTML = '<div class="klein">Suche …</div>';
+    fetch(CONFIG.ANGEBOT + "?mode=search&q=" + encodeURIComponent(q), {cache:"no-store"})
+      .then(r => r.json())
+      .then(j => {
+        const res = (j && j.results) || [];
+        if (!res.length) { $("treffer").innerHTML = '<div class="klein">Kein Bestandskunde gefunden – Felder unten frei ausfüllen.</div>'; return; }
+        $("treffer").innerHTML = res.map(c => {
+          const p = c.properties || {};
+          return '<div data-cid="'+c.id+'" data-name="'+esc(((p.firstname||"")+" "+(p.lastname||"")).trim())+'" data-mail="'+esc(p.email||"")+'" data-adr="'+esc(p.address||"")+'">'+
+                 '<b>'+esc(((p.firstname||"")+" "+(p.lastname||"")).trim() || "(ohne Namen)")+'</b> · '+esc(p.email||"–")+(p.address?' <span class="klein">'+esc(p.address)+'</span>':'')+'</div>';
+        }).join("");
+      })
+      .catch(() => { $("treffer").innerHTML = '<div class="warn">Suche nicht erreichbar – Felder von Hand ausfüllen.</div>'; });
+  }, 350);
+});
+$("treffer").addEventListener("click", e => {
+  const d = e.target.closest("[data-cid]"); if (!d) return;
+  $("kname").value = d.getAttribute("data-name");
+  $("kmail").value = d.getAttribute("data-mail");
+  const adr = d.getAttribute("data-adr") || "";
+  const m = adr.match(/^(.*?),\s*(\d{5}\s+.*)$/);
+  if (m) { $("strasse").value = m[1]; $("plzort").value = m[2]; } else if (adr && !$("strasse").value) { $("strasse").value = adr; }
+  $("treffer").innerHTML = ""; $("suche").value = "";
+  dealsLaden(d.getAttribute("data-cid"));
+});
+function dealsLaden(cid){
+  const s = $("dealId");
+  s.innerHTML = '<option value="">Neuer Deal wird angelegt</option>';
+  fetch(CONFIG.ANGEBOT + "?mode=deals&cid=" + encodeURIComponent(cid), {cache:"no-store"})
+    .then(r => r.json())
+    .then(j => {
+      ((j && j.results) || []).forEach(d => {
+        const p = d.properties || {};
+        const o = document.createElement("option");
+        o.value = d.id; o.textContent = (p.dealname || "Deal " + d.id) + " · " + (p.dealstage || "") + (p.amount ? " · " + eur(Number(p.amount)) : "");
+        s.appendChild(o);
+      });
+      if (s.options.length > 1) s.selectedIndex = 1;
+    }).catch(() => {});
+}
+
+/* ============================================================
+   Angebot erstellen → Make (Doc, Nummer, Deal, Slack)
+   ============================================================ */
+const nl2br = s => esc(s).replace(/\n/g, "<br>");
+function angebotDaten(){
+  const {kwp, zeilen} = bauen();
+  const rabatt = v("rabatt");
+  let netto0 = 0, netto19 = 0, alt = 0, ekSumme = 0;
+  const positionen = [];
+  const posHtml = zeilen.map((z, i) => {
+    const vkGes = z.vkEinheit * z.menge;
+    if (z.alternativ) alt += vkGes;
+    else { if (z.mwst === 19) netto19 += vkGes; else netto0 += vkGes; ekSumme += z.ekEinheit * z.menge; }
+    positionen.push({ pos:String(i+1).padStart(3,"0"), id:z.id, name:z.name, menge:Math.round(z.menge*100)/100, eh:z.eh, vk:z.vkEinheit, mwst:z.mwst, alt:!!z.alternativ, lagerId:z.lager || "" });
+    const preis = p => z.alternativ ? "(" + num(p) + " €)" : num(p) + " €";
+    return '<tr><td valign="top">'+String(i+1).padStart(3,"0")+'</td><td valign="top">'+num(z.menge)+' '+esc(z.eh)+'</td>'+
+           '<td valign="top"><b>'+(z.alternativ?'Alternativ: ':'')+esc(z.name)+'</b>'+(z.langtext?'<br><span style="font-size:9pt">'+nl2br(z.langtext)+'</span>':'')+'</td>'+
+           '<td valign="top">'+z.mwst+'%</td><td valign="top" align="right">'+preis(z.vkEinheit)+'</td><td valign="top" align="right">'+preis(vkGes)+'</td></tr>';
+  }).join("");
+  const nettoVor = netto0 + netto19, netto = nettoVor - rabatt, ust19 = netto19 * 0.19, brutto = netto + ust19;
+  let kosten = ekSumme;
+  KOSTEN.forEach(k => { kosten += k.basis === "pro kWp" ? k.wert * kwp : k.basis === "pro Std" ? k.wert * v("std_"+k.id) : k.wert; });
+  const m = art($("modul").value), w = art($("wr").value), sp = art($("speicher").value);
+  const zusammenfassung = num(kwp) + " kWp · " + v("modAnz") + " × " + (m ? m.name : "–") + " · " + (w ? w.name : "–") +
+        (sp && v("spAnz") > 0 ? " · " + v("spAnz") + " × " + sp.name : "") + " · " + num(brutto) + " € brutto";
+  return { kwp:num(kwp), posHtml, positionen:JSON.stringify(positionen), alt:num(alt), nettovor:num(nettoVor), rabatt:num(rabatt),
+           netto:num(netto), ust19:num(ust19), brutto:num(brutto), bruttonum:brutto.toFixed(2), gewinn:(netto - kosten).toFixed(2), zusammenfassung };
+}
+
+$("btnErstellen").addEventListener("click", () => {
+  const erg = $("ergebnis");
+  const kname = $("kname").value.trim(), kmail = $("kmail").value.trim();
+  if (!kname || !/^\S+@\S+\.\S+$/.test(kmail)) { erg.className = "ergebnis fehler"; erg.textContent = "⛔ Name und gültige E-Mail des Kunden fehlen."; return; }
+  if (!(v("modAnz") > 0 && v("modWp") > 0)) { erg.className = "ergebnis fehler"; erg.textContent = "⛔ Keine Module gewählt."; return; }
+  const d = angebotDaten();
+  if (!confirm("Angebot für " + kname + " über " + d.brutto + " € erstellen?\nEs wird ein Google-Doc erzeugt und der HubSpot-Deal angelegt/aktualisiert. Gesendet wird noch nichts.")) return;
+  const fd = new URLSearchParams();
+  fd.set("mode", "create"); fd.set("key", CONFIG.KEY);
+  fd.set("kname", kname); fd.set("kmail", kmail); fd.set("anrede", $("anrede").value.trim() || "Sehr geehrte Damen und Herren,");
+  fd.set("strasse", $("strasse").value.trim()); fd.set("plzort", $("plzort").value.trim()); fd.set("kdnr", $("kdnr").value.trim());
+  if ($("dealId").value) fd.set("dealId", $("dealId").value);
+  Object.keys(d).forEach(k => fd.set(k, d[k]));
+  const btn = $("btnErstellen"); btn.disabled = true; btn.textContent = "⏳ Doc wird erstellt … (ca. 20 Sekunden)";
+  erg.className = ""; erg.innerHTML = "";
+  fetch(CONFIG.ANGEBOT, { method:"POST", body:fd })
+    .then(r => r.text())
+    .then(t => {
+      let j = null; try { j = JSON.parse(t); } catch(e) {}
+      if (!j || !j.ok) throw new Error(t.slice(0, 200) || "leere Antwort");
+      erg.className = "ergebnis";
+      erg.innerHTML = '✅ <b>Angebot '+esc(j.nr)+'</b> erstellt – Status <b>Entwurf</b>, HubSpot-Deal gesetzt, Slack informiert.<br>' +
+        '<a href="'+esc(j.docUrl)+'" target="_blank">📝 Doc öffnen / anpassen</a>' +
+        '<a class="senden" href="'+esc(j.sendUrl)+'" target="_blank">📧 An Kunden SENDEN (mit Bestätigung)</a>';
+    })
+    .catch(e => { erg.className = "ergebnis fehler"; erg.textContent = "⛔ Angebot konnte nicht erstellt werden: " + e.message; })
+    .finally(() => { btn.disabled = false; btn.textContent = "📄 Angebot erstellen"; });
+});
+
+laden();
+</script>
+</body>
+</html>
