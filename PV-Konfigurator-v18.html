@@ -1043,7 +1043,8 @@ function angebotPdfDef(D, LOGO){
   ];
   const summen = [];
   if (D.alt && D.alt !== "0,00") summen.push(sum("Alternative Positionen", "(" + eurT(D.alt) + ")", false));
-  summen.push(sum("Nettobetrag (ohne Rabatt)", eurT(D.nettovor), true));
+  const hatRabatt = D.rabatt && D.rabatt !== "0,00";
+  if (hatRabatt) summen.push(sum("Nettobetrag (ohne Rabatt)", eurT(D.nettovor), true));  /* nur bei Rabatt anzeigen (Wunsch Vertrieb 29.09.) */
   if (D.rabatt && D.rabatt !== "0,00") summen.push(sum("Rabatt", "-" + eurT(D.rabatt), false));
   summen.push(sum("Nettobetrag", eurT(D.netto), true));
   summen.push(sum("zzgl. 0% MwSt.", eurT("0,00"), false));
