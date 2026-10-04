@@ -195,6 +195,35 @@
   .pop button:hover{background:#f1f5f9}
   .pop .wa{color:#25D366}
 
+  /* ===== Montageplan (Dachflächen-Zeichnung für den Monteur) ===== */
+  .mp-sec{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+  .mp-kopf{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .mp-kopf h4{margin:0;font-size:15px;flex:1}
+  .mp-warn{background:#fee2e2;border:2px solid #dc2626;color:#991b1b;border-radius:12px;padding:12px 14px;margin:12px 0;font-size:16px;font-weight:700;line-height:1.45}
+  .mp-warn ul{margin:6px 0 0 18px;padding:0;font-size:15px}
+  .mp-info{background:#e0f2fe;border:1px solid #7dd3fc;color:#075985;border-radius:12px;padding:10px 14px;margin:12px 0;font-size:14.5px;font-weight:600}
+  .mp-ok{background:#dcfce7;border:1px solid #86efac;color:#166534}
+  .mp-dach{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+  .mp-dach h5{flex:1 1 100%;margin:0;font-size:17px;color:var(--ink)}
+  .mp-zeichnung{flex:3 1 480px;min-width:0;border:1px solid var(--line);border-radius:12px;background:#fff;padding:6px}
+  .mp-zeichnung svg{display:block;width:100%;height:auto}
+  .mp-liste{flex:1 1 300px;min-width:0}
+  .mp-tab{width:100%;border-collapse:collapse;font-size:14.5px}
+  .mp-tab th{text-align:left;font-size:12px;color:var(--muted);border-bottom:2px solid var(--line);padding:6px 4px}
+  .mp-tab td{padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:middle}
+  .mp-fb{display:inline-block;width:22px;height:12px;border-radius:3px;vertical-align:middle;border:1px solid rgba(0,0,0,.15)}
+  .mp-punkt{display:inline-block;width:12px;height:12px;border-radius:50%;background:#0f172a;vertical-align:middle}
+  .mp-n{font-weight:800;font-size:18px}
+  .mp-schnitt{color:#dc2626;font-weight:800}
+  .mp-zs{margin:10px 0 0;padding:0;list-style:none;font-size:14.5px}
+  .mp-zs li{padding:6px 0;border-bottom:1px dashed var(--line)}
+  .mp-hinweis{font-size:13.5px;color:#334155;margin-top:8px}
+  .mp-kontrolle{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:10px 0}
+  .mp-kontrolle label{display:flex;flex-direction:column;font-size:12.5px;font-weight:700;color:var(--muted);gap:3px}
+  .mp-kontrolle input,.mp-kontrolle select{font-size:15px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;font-family:inherit}
+  .mp-kontrolle input.mp-reihen{width:150px;font-weight:800}
+  .mp-vorschau img{max-width:100%;max-height:320px;border:1px solid var(--line);border-radius:8px;margin-top:6px}
+  @media(max-width:760px){ .mp-zeichnung,.mp-liste{flex:1 1 100%} }
   @media(max-width:820px){ .grid2{grid-template-columns:1fr} .role button{padding:7px 10px} .brand span.full{display:none} }
 .at-link{display:inline-flex;align-items:center;gap:7px;margin-top:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:9px;padding:8px 12px;font-size:13px;font-weight:600;text-decoration:none}
 .at-link:active{opacity:.7}
@@ -274,6 +303,7 @@ const CONFIG = {
   DEL_URL:  "https://hook.eu2.make.com/lph662moo1sopvj5k9u96b0w1gulb9qc",
   MAT_URL:  "https://hook.eu2.make.com/9xmi0l3c0gxomg261wqvc9mr1njt1zja",   // Make 9914877: Materialliste aus dem PV-Konfigurator (liste / ersetzen)
   MAT_KEY:  "mlk7syrink",
+  KATALOG_URL: "https://hook.eu2.make.com/4jc0nue3i98jesk3xvh6gl1xlscqw7gv",   // PV-Katalog (Make 9800213) – Modulmaße für den Montageplan
   CODE_ADMIN: "7894",   // voller Zugriff
   CODE_MIT:   "1234"    // nur freigegebene Kunden
 };
@@ -553,6 +583,7 @@ function renderDetail(){
       ? '<div class="hint"><b>Packen:</b> Stückzahl packen, bei <b>Raus</b> eintragen, was mitgeht (grauer Vorschlag = mit Reserve), abhaken. Wenn alles gepackt ist: Foto machen und den grünen Knopf drücken. <b>Nach der Baustelle:</b> Reste zählen und bei <b>Zurück</b> eintragen.</div>'
       : '<div class="hint"><b>Div. = Outbound − Inbound</b> (was tatsächlich verbraucht wurde). Ist der Wert gleich <b>Benötigt</b> → <span style="color:var(--accent);font-weight:700">grün</span>, sonst → <span style="color:var(--danger);font-weight:700">rot</span>. '
     +'Als Büro füllst du <b>Benötigt</b> aus und setzt den Status.</div>')+'</div>'
+    +'<div class="mp-sec"><div class="mp-kopf"><h4>📐 Montageplan <span style="font-weight:400;font-size:13px;color:var(--muted)">Schienen, Verbinder, Zuschnitte, Dachhaken je Dachfläche</span></h4><button class="btn primary" id="mpBtn" type="button">Montageplan anzeigen</button></div><div id="mpBody"></div></div>'
     +fotoBtn;
 
   const ss=$("#statusSel"); if(ss) ss.onchange=e=>{ c.status=e.target.value; saveStatus(c); toast("Status gespeichert"); };
@@ -624,6 +655,312 @@ async function materiallisteNeu(c){
   }catch(e){ toast("Fehler: "+e.message,true); }
   finally{ const b=$("#mlNeuBtn"); if(b) b.disabled=false; }
 }
+
+/* ===== Montageplan für den Monteur =====
+   Datenquelle: im unterschriebenen Konfigurator-Angebot gespeicherte Materialliste (Make 9914877, Route liste).
+   Gibt es keine, kann das Büro einen Belegungsplan hochladen → dieselbe KI-Erkennung wie im Konfigurator
+   (Route starten/ergebnis) → Ergebnis zur Kontrolle (änderbar) → Zeichnung. Dieses Ergebnis wird nur in
+   diesem Browser gespeichert.
+   Rechenregeln wie PV-Konfigurator ab v23 (Länge, Schienen-Kombi mit kleinstem Rest, Haken = abrunden(L ÷ 2·Sparren) + 1).
+   Stoß-/Montageregeln: NUR aus Obsidian „05 Wissen/SL Rack Schrägdachsysteme 2026 (Prospekt-Wissen).md“.
+   Diese Notiz enthält (Stand 04.10.2026) KEINE Stoß-, Haken-Abstands- oder Klemmbereichsregeln → im Plan
+   steht eine rote Warnung, Stoßlage und Schienenlage sind nicht gegen Regeln geprüft. */
+const MP_LAENGEN = [
+  { mm:5850, t:"5,85 m", farbe:"#1565C0", fname:"blau" },
+  { mm:4750, t:"4,75 m", farbe:"#2E7D32", fname:"grün" },
+  { mm:3600, t:"3,6 m",  farbe:"#7B1FA2", fname:"lila" },
+  { mm:2400, t:"2,4 m",  farbe:"#F9A825", fname:"gelb" }
+];
+const MP_FUGE = 20, MP_RAND = 60;
+const MP_HAKEN = { "Ziegel":"Dachhaken L (Ziegel)", "Biberschwanz":"Bieberschwanz Haken", "Falz":"Dachhaken Falzdach", "Trapez":"Dachhaken Trapezblech" };
+const MP_REGELN_FEHLEN = [
+  "wo der Schienenstoß / Innenverbinder sitzen darf",
+  "Mindestabstand Stoß ↔ Dachhaken",
+  "Lage der Schienen am Modul (Klemmbereich laut Modul-Datenblatt)",
+  "Überstand der Schienen über das Modulfeld und Lage der Sparren"
+];
+const mpM = mm => (mm / 1000).toLocaleString("de-DE", { minimumFractionDigits:2, maximumFractionDigits:3 }) + " m";
+const mpCm = mm => (Math.round(mm) / 10).toLocaleString("de-DE", { maximumFractionDigits:1 }) + " cm";
+const mpL = mm => MP_LAENGEN.find(x => x.mm === mm);
+
+const MP_KOMBI = {};
+function mpKombi(L){
+  if (MP_KOMBI[L]) return MP_KOMBI[L];
+  const lim = MP_LAENGEN.map(s => Math.ceil(L / s.mm));
+  let best = null;
+  for (let a = 0; a <= lim[0]; a++) for (let b = 0; b <= lim[1]; b++) for (let c = 0; c <= lim[2]; c++) for (let d = 0; d <= lim[3]; d++) {
+    const n = a + b + c + d; if (!n) continue;
+    const summe = a * 5850 + b * 4750 + c * 3600 + d * 2400; if (summe < L) continue;
+    const rest = summe - L;
+    if (!best || rest < best.rest || (rest === best.rest && n < best.n)) best = { teile:[a, b, c, d], n, summe, rest };
+  }
+  return (MP_KOMBI[L] = best);
+}
+/* Eine Reihe: Länge, Stücke (lang → kurz), das kürzeste Stück wird um den Rest gekürzt, Haken je Schiene */
+function mpReihe(n, breite, sparrenMm){
+  const L = n * breite + (n - 1) * MP_FUGE + 2 * MP_RAND;
+  const k = mpKombi(L), stuecke = [];
+  MP_LAENGEN.forEach((s, i) => { for (let z = 0; z < k.teile[i]; z++) stuecke.push(s.mm); });
+  const schnitt = k.rest > 0 ? { index:stuecke.length - 1, von:stuecke[stuecke.length - 1], auf:stuecke[stuecke.length - 1] - k.rest, ab:k.rest } : null;
+  return { n, L, k, stuecke, schnitt, haken:Math.floor(L / (2 * sparrenMm)) + 1 };
+}
+function mpMasseAusKatalog(a){
+  if (!a) return null;
+  const t = String(a.langtext || ""), i = t.search(/abmessung/i);
+  const m = (i >= 0 ? t.slice(i) : t).match(/(\d{3,4})\s*[x×]\s*(\d{3,4})(?:\s*[x×]\s*\d{1,3}(?:[.,]\d+)?)?\s*mm/i);
+  if (!m) return null;
+  const lang = Math.max(+m[1], +m[2]), kurz = Math.min(+m[1], +m[2]);
+  return (lang < 900 || lang > 2800 || kurz < 600 || kurz > 1500) ? null : { lang, kurz };
+}
+let MP_KATALOG = null;
+async function mpKatalog(){
+  if (MP_KATALOG) return MP_KATALOG;
+  const r = await fetch(CONFIG.KATALOG_URL, { cache:"no-store" });
+  const j = await r.json();
+  MP_KATALOG = ((j && j.katalog && j.katalog.records) || []).map(x => { const f = x.fields || {};
+    return { id:x.id, name:f.fldZKRshSWTobcpm0 || "", kat:f.fldYWDj11G2im36KU || "", langtext:f.fldL9BQpZiZ8HIpjF || "" }; });
+  return MP_KATALOG;
+}
+
+/* ---------- Zeichnung (Draufsicht, maßstäblich in mm) ---------- */
+function mpSvg(dach, masse, sparrenCm){
+  const hk = dach.ausrichtung !== "quer", wRow = hk ? masse.kurz : masse.lang, hMod = hk ? masse.lang : masse.kurz;
+  const S = sparrenCm * 10, rows = dach.reihen.filter(n => n > 0).map(n => mpReihe(n, wRow, S));
+  const maxL = Math.max.apply(null, rows.map(r => r.L)), gap = 20, fs = Math.max(150, maxL / 55);
+  const hoeheGes = rows.length * hMod + (rows.length - 1) * gap;
+  const links = fs * 3.2, rechts = fs * 7, oben = fs * 4.4, unten = fs * 1.6;
+  const vb = [-links, -oben, maxL + links + rechts, hoeheGes + oben + unten];
+  let g = "";
+  /* Maßstab 1 m */
+  g += '<line x1="0" y1="' + (-oben + fs * 0.9) + '" x2="1000" y2="' + (-oben + fs * 0.9) + '" stroke="#0f172a" stroke-width="' + fs * 0.12 + '"/>' +
+       '<text x="1080" y="' + (-oben + fs * 1.25) + '" font-size="' + fs + '" fill="#0f172a">1 m</text>';
+  /* zuerst alle Module, darüber die Sparren, darüber Schienen, Verbinder, Schnitte, Haken */
+  rows.forEach((r, i) => { const y0 = i * (hMod + gap);
+    for (let j = 0; j < r.n; j++) g += '<rect x="' + (MP_RAND + j * (wRow + MP_FUGE)) + '" y="' + y0 + '" width="' + wRow + '" height="' + hMod + '" fill="#e2e8f0" stroke="#64748b" stroke-width="' + fs * 0.08 + '"/>'; });
+  /* Sparren gestrichelt (Lage angenommen: erster Sparren am Schienenanfang) */
+  for (let x = 0; x <= maxL + 1; x += S) g += '<line x1="' + x + '" y1="' + (-fs * 0.9) + '" x2="' + x + '" y2="' + (hoeheGes + fs * 0.4) + '" stroke="#475569" stroke-opacity="0.75" stroke-width="' + fs * 0.08 + '" stroke-dasharray="' + fs * 0.6 + ' ' + fs * 0.45 + '"/>';
+  g += '<text x="0" y="' + (-fs * 1.4) + '" font-size="' + fs * 0.85 + '" fill="#475569">Sparren alle ' + sparrenCm + ' cm (gestrichelt, Lage angenommen)</text>';
+  rows.forEach((r, i) => {
+    const y0 = i * (hMod + gap);
+    g += '<text x="' + (-links + fs * 0.3) + '" y="' + (y0 + hMod / 2 + fs * 0.35) + '" font-size="' + fs * 1.05 + '" font-weight="700" fill="#0f172a">R' + (i + 1) + '</text>';
+    [0.25, 0.75].forEach(f => {
+      const y = y0 + hMod * f, dick = fs * 0.45;
+      let x = 0;
+      r.stuecke.forEach((mm, si) => {
+        const len = (r.schnitt && si === r.schnitt.index) ? r.schnitt.auf : mm;
+        g += '<rect x="' + x + '" y="' + (y - dick / 2) + '" width="' + len + '" height="' + dick + '" fill="' + mpL(mm).farbe + '" stroke="#0f172a" stroke-width="' + fs * 0.04 + '"/>';
+        x += len;
+        if (si < r.stuecke.length - 1) g += '<rect x="' + (x - fs * 0.5) + '" y="' + (y - dick) + '" width="' + fs + '" height="' + dick * 2 + '" fill="#dc2626"/>';   /* Verbinder */
+      });
+      if (r.schnitt) g += '<line x1="' + r.L + '" y1="' + (y - dick * 1.6) + '" x2="' + r.L + '" y2="' + (y + dick * 1.6) + '" stroke="#dc2626" stroke-width="' + fs * 0.22 + '"/>';   /* Schnitt */
+      for (let h = 0; h < r.haken; h++) g += '<circle cx="' + (h * 2 * S) + '" cy="' + y + '" r="' + fs * 0.42 + '" fill="#0f172a" stroke="#fff" stroke-width="' + fs * 0.08 + '"/>';
+    });
+    g += '<text x="' + (maxL + fs * 0.6) + '" y="' + (y0 + hMod / 2 - fs * 0.2) + '" font-size="' + fs + '" font-weight="700" fill="#0f172a">' + r.n + ' Module</text>' +
+         '<text x="' + (maxL + fs * 0.6) + '" y="' + (y0 + hMod / 2 + fs * 1.1) + '" font-size="' + fs + '" fill="#1565C0" font-weight="700">' + mpM(r.L) + '</text>';
+  });
+  return { svg:'<svg viewBox="' + vb.join(" ") + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Montageplan ' + esc(dach.name || "") + '">' + g + '</svg>', rows };
+}
+
+/* ---------- Liste je Dachfläche / gesamt ---------- */
+function mpZaehlen(rows, dachart){
+  const z = { laengen:{}, schnitte:{}, verb:0, mk:0, ek:0, kap:0, haken:0, hakenTyp:{} };
+  rows.forEach(r => {
+    r.stuecke.forEach(mm => { z.laengen[mm] = (z.laengen[mm] || 0) + 2; });
+    if (r.schnitt) { const key = r.schnitt.von + "|" + r.schnitt.auf; z.schnitte[key] = (z.schnitte[key] || 0) + 2; }
+    z.verb += 2 * (r.stuecke.length - 1); z.mk += (r.n - 1) * 2; z.ek += 4; z.kap += 4; z.haken += 2 * r.haken;
+    z.hakenTyp[dachart] = (z.hakenTyp[dachart] || 0) + 2 * r.haken;
+  });
+  return z;
+}
+function mpAddiere(a, b){
+  Object.keys(b.laengen).forEach(k => a.laengen[k] = (a.laengen[k] || 0) + b.laengen[k]);
+  Object.keys(b.schnitte).forEach(k => a.schnitte[k] = (a.schnitte[k] || 0) + b.schnitte[k]);
+  ["verb", "mk", "ek", "kap", "haken"].forEach(k => a[k] += b[k]);
+  Object.keys(b.hakenTyp).forEach(k => a.hakenTyp[k] = (a.hakenTyp[k] || 0) + b.hakenTyp[k]);
+  return a;
+}
+function mpListeHtml(z){
+  const zeile = (sw, art, n, zs) => '<tr><td>' + sw + '</td><td>' + art + '</td><td class="mp-n" style="text-align:right">' + n + '</td><td>' + (zs || "") + '</td></tr>';
+  let h = '<table class="mp-tab"><thead><tr><th>Farbe</th><th>Artikel</th><th style="text-align:right">Anzahl</th><th>Zuschnitt</th></tr></thead><tbody>';
+  MP_LAENGEN.forEach(s => {
+    const n = z.laengen[s.mm]; if (!n) return;
+    const zs = Object.keys(z.schnitte).filter(k => +k.split("|")[0] === s.mm).map(k => '<span class="mp-schnitt">' + z.schnitte[k] + '× auf ' + mpM(+k.split("|")[1]) + ' kürzen</span> (' + mpCm(s.mm - +k.split("|")[1]) + ' ab)').join("<br>");
+    h += zeile('<span class="mp-fb" style="background:' + s.farbe + '"></span> ' + s.fname, 'Schiene ' + s.t, '<span style="color:' + s.farbe + '">' + n + '</span>', zs);
+  });
+  h += zeile('<span class="mp-fb" style="background:#dc2626"></span> rot', 'Innenverbinder', '<span style="color:#dc2626">' + z.verb + '</span>');
+  Object.keys(z.hakenTyp).forEach(t => {
+    const ohneLager = t === "Falz" || t === "Trapez";
+    h += zeile('<span class="mp-punkt"></span> Punkt', (MP_HAKEN[t] || "Dachhaken") + (ohneLager ? ' <b style="color:#dc2626">– KEIN Lager-Artikel</b>' : ''),'<span style="color:' + (ohneLager ? '#dc2626' : '#0f172a') + '">' + z.hakenTyp[t] + '</span>');
+  });
+  h += zeile('', 'Mittelklemmen', z.mk) + zeile('', 'Endklemmen', z.ek) + zeile('', 'Endkappen', z.kap);
+  return h + '</tbody></table>';
+}
+function mpZuschnittJeSchiene(rows){
+  return '<ul class="mp-zs">' + rows.map((r, i) => '<li><b>Reihe ' + (i + 1) + '</b> (beide Schienen, ' + mpM(r.L) + '): ' +
+    r.stuecke.map(mm => '<span style="color:' + mpL(mm).farbe + ';font-weight:800">' + mpL(mm).t + '</span>').join(" + ") +
+    (r.schnitt ? ' → <span class="mp-schnitt">' + mpL(r.schnitt.von).t + ' auf ' + mpM(r.schnitt.auf) + ' kürzen (' + mpCm(r.schnitt.ab) + ' ab)</span>' : ' → <b style="color:#166534">passt ohne Zuschnitt</b>') +
+    ' · ' + (r.stuecke.length - 1) + ' Verbinder · <b>' + r.haken + '</b> Haken je Schiene</li>').join("") + '</ul>';
+}
+
+/* ---------- Gesamtansicht ---------- */
+function mpZeichnen(box, ml, masse, sparrenCm, quelle){
+  const daecher = (ml.daecher || []).filter(d => (d.reihen || []).some(n => n > 0));
+  let h = '<div class="mp-warn">⛔ Stoß- und Montageregeln fehlen im Prospekt-Wissen („SL Rack Schrägdachsysteme 2026“). Im Plan NICHT gegen Regeln geprüft:<ul>' +
+          MP_REGELN_FEHLEN.map(x => '<li>' + esc(x) + '</li>').join("") + '</ul>Stöße und Schienenlage sind nur schematisch eingezeichnet – vor Ort nach SL-Rack-Montageanleitung prüfen.</div>';
+  h += '<div class="mp-info">Quelle: <b>' + esc(quelle) + '</b> · Modul ' + masse.lang + ' × ' + masse.kurz + ' mm · Sparrenabstand <b>' + sparrenCm + ' cm</b> · Reihen linksbündig gezeichnet' +
+       '<br><span class="mp-fb" style="background:#1565C0"></span> 5,85 m &nbsp;<span class="mp-fb" style="background:#2E7D32"></span> 4,75 m &nbsp;<span class="mp-fb" style="background:#7B1FA2"></span> 3,6 m &nbsp;<span class="mp-fb" style="background:#F9A825"></span> 2,4 m &nbsp;<span class="mp-fb" style="background:#dc2626"></span> Verbinder &nbsp;<b style="color:#dc2626">|</b> Schnitt &nbsp;<span class="mp-punkt"></span> Dachhaken</div>';
+  const gesamt = { laengen:{}, schnitte:{}, verb:0, mk:0, ek:0, kap:0, haken:0, hakenTyp:{} };
+  daecher.forEach(d => {
+    const zz = mpSvg(d, masse, sparrenCm), z = mpZaehlen(zz.rows, d.dachart || "Ziegel");
+    mpAddiere(gesamt, z);
+    h += '<div class="mp-dach"><h5>' + esc(d.name || "Dachfläche") + ' · ' + esc(d.ausrichtung || "hochkant") + ' · ' + esc(d.dachart || "Ziegel") + '</h5>' +
+         '<div class="mp-zeichnung">' + zz.svg + '</div><div class="mp-liste">' + mpListeHtml(z) + '<div class="mp-hinweis"><b>Zuschnitt je Schiene:</b></div>' + mpZuschnittJeSchiene(zz.rows) + '</div></div>';
+  });
+  if (daecher.length > 1) h += '<div class="mp-dach"><h5>Gesamt – alle Dachflächen</h5><div class="mp-liste" style="flex:1 1 100%">' + mpListeHtml(gesamt) + '</div></div>';
+  if (!daecher.length) h += '<div class="mp-warn">⛔ Die Materialliste enthält keine Dachfläche mit Modulen.</div>';
+  box.innerHTML = h;
+}
+
+/* ---------- Laden: gespeicherte Materialliste oder KI-Erkennung ---------- */
+const mpSpeicherKey = id => "montageplan_" + id;
+function mpLokal(id){ try { return JSON.parse(localStorage.getItem(mpSpeicherKey(id)) || "null"); } catch(e) { return null; } }
+async function mpOeffnen(c){
+  const box = $("#mpBody"); box.innerHTML = '<div class="mp-info">⏳ Montageplan wird geladen …</div>';
+  try {
+    let j = null;
+    try { j = await fetch(CONFIG.MAT_URL + "?action=liste&key=" + CONFIG.MAT_KEY + "&b=" + encodeURIComponent(c.id) + "&t=" + Date.now(), { cache:"no-store" }).then(r => r.json()); } catch(e) { j = null; }
+    const ml = j && j.ok && j.zustand && j.zustand.materialliste;
+    if (ml && (ml.daecher || []).some(d => (d.reihen || []).some(n => n > 0))) {
+      let masse = ml.masse || ml.masseHand || null;
+      if (!masse) { const kat = await mpKatalog(); masse = mpMasseAusKatalog(kat.find(a => a.id === (ml.modul || j.zustand.modul))); }
+      if (!masse) { box.innerHTML = '<div class="mp-warn">⛔ Modulmaße fehlen (weder im Angebot noch im PV-Katalog) – Montageplan kann nicht gezeichnet werden.</div>'; return; }
+      mpZeichnen(box, ml, masse, Number(ml.sparren) || 65, "Materialliste aus Angebot " + (j.anzeige || j.nr));
+      return;
+    }
+    const lokal = mpLokal(c.id);
+    if (lokal && lokal.ml) {
+      mpZeichnen(box, lokal.ml, lokal.masse, lokal.sparren, "KI-Erkennung vom " + (lokal.datum || "?") + " (nur in diesem Browser gespeichert)");
+      if (state.access === "admin") box.insertAdjacentHTML("beforeend", mpUploadHtml(c, true));
+      return;
+    }
+    box.innerHTML = '<div class="mp-info">Für diese Baustelle ist keine Materialliste aus einem Konfigurator-Angebot gespeichert.</div>' +
+      (state.access === "admin" ? mpUploadHtml(c, false) : '<div class="mp-warn">⛔ Noch kein Montageplan – bitte das Büro, den Belegungsplan auszuwerten.</div>');
+  } catch(e) {
+    box.innerHTML = '<div class="mp-warn">⛔ Montageplan konnte nicht geladen werden: ' + esc(e.message) + '</div>';
+  }
+}
+function mpUploadHtml(c, neu){
+  return '<div class="mp-kontrolle"><button class="btn primary" type="button" data-mp-upload>📐 ' + (neu ? 'Neuen ' : '') + 'Belegungsplan hochladen (KI erkennt Reihen)</button>' +
+    (c.plan && c.plan.url ? '<button class="btn" type="button" data-mp-plan>Belegungsplan der Baustelle auswerten</button>' : '') +
+    '<input type="file" id="mpDatei" accept="application/pdf,image/png,image/jpeg" hidden></div><div id="mpKi"></div>';
+}
+
+/* ---------- KI-Erkennung (wie PV-Konfigurator v23) ---------- */
+let mpPdfjs = null;
+function mpPdf(){
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (!mpPdfjs) mpPdfjs = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; res(window.pdfjsLib); };
+    s.onerror = () => { mpPdfjs = null; rej(new Error("PDF-Leser konnte nicht geladen werden")); }; document.head.appendChild(s); });
+  return mpPdfjs;
+}
+function mpLeinwand(w, h){ const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); return c; }
+async function mpSeiten(blob, istPdf){
+  if (istPdf) {
+    const lib = await mpPdf(), pdf = await lib.getDocument({ data:await blob.arrayBuffer() }).promise, out = [];
+    for (let n = 1; n <= Math.min(pdf.numPages, 4); n++) {
+      const pg = await pdf.getPage(n), v1 = pg.getViewport({ scale:1 }), vp = pg.getViewport({ scale:Math.min(5, 2000 / Math.max(v1.width, v1.height)) });
+      const c = mpLeinwand(vp.width, vp.height);
+      await pg.render({ canvasContext:c.getContext("2d"), viewport:vp, intent:"print" }).promise;   /* läuft auch im verdeckten Tab */
+      out.push(c);
+    }
+    return out;
+  }
+  return [await new Promise((res, rej) => { const img = new Image(), url = URL.createObjectURL(blob);
+    img.onload = () => { const f = Math.min(1, 2000 / Math.max(img.width, img.height)), c = mpLeinwand(img.width * f, img.height * f); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("Bild konnte nicht geöffnet werden")); }; img.src = url; })];
+}
+function mpDrehen(cv, grad){
+  const quer = grad % 180 !== 0, c = mpLeinwand(quer ? cv.height : cv.width, quer ? cv.width : cv.height), x = c.getContext("2d");
+  x.translate(c.width / 2, c.height / 2); x.rotate(grad * Math.PI / 180); x.drawImage(cv, -cv.width / 2, -cv.height / 2); return c;
+}
+const mpPause = ms => new Promise(r => setTimeout(r, ms));
+async function mpKi(cv, aufgerichtet, zeige){
+  const job = "b" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10), fd = new FormData();
+  fd.append("action", "starten"); fd.append("key", CONFIG.MAT_KEY); fd.append("job", job); fd.append("gedreht", aufgerichtet ? "1" : "0"); fd.append("bild", cv.toDataURL("image/jpeg", 0.85));
+  const st = await fetch(CONFIG.MAT_URL, { method:"POST", body:fd }).then(r => r.json());
+  if (!st || st.ok !== 1) throw new Error("KI-Auftrag konnte nicht gestartet werden");
+  const t0 = Date.now(); await mpPause(8000);
+  while (Date.now() - t0 < 240000) {
+    zeige(Math.round((Date.now() - t0) / 1000));
+    let j = null;
+    try { const txt = await fetch(CONFIG.MAT_URL + "?action=ergebnis&key=" + CONFIG.MAT_KEY + "&job=" + job + "&t=" + Date.now(), { cache:"no-store" }).then(r => r.text());
+          try { j = JSON.parse(txt); } catch(e) { if (txt) throw new Error("KI-Ergebnis war nicht lesbar – bitte nochmal versuchen"); } }
+    catch(e) { if (/nicht lesbar/.test(e.message)) throw e; }
+    if (j && j.fertig) { if (j.ok !== 1) throw new Error(j.fehler || "KI-Erkennung fehlgeschlagen"); return j.ergebnis; }
+    await mpPause(4000);
+  }
+  throw new Error("Die KI hat nach 4 Minuten noch kein Ergebnis geliefert");
+}
+async function mpAuswerten(c, blob, name){
+  const ki = $("#mpKi"), status = (cls, t) => { ki.innerHTML = '<div class="' + (cls === "fehler" ? "mp-warn" : "mp-info") + '">' + t + '</div>'; };
+  try {
+    status("", "⏳ <b>" + esc(name) + "</b> wird gelesen …");
+    const istPdf = /\.pdf$/i.test(name) || blob.type === "application/pdf", seiten = await mpSeiten(blob, istPdf);
+    const daecher = [], ohne = []; let vorschau = "", gedreht = 0;
+    for (let i = 0; i < seiten.length; i++) {
+      const s = seiten.length > 1 ? " (Seite " + (i + 1) + "/" + seiten.length + ")" : "";
+      let cv = seiten[i], j = await mpKi(cv, false, sek => status("", "🤖 KI liest den Belegungsplan" + s + " … " + sek + " s"));
+      if (j.modulnummern === false) { ohne.push(i + 1); continue; }
+      const dreh = [90, 180, 270].indexOf(Number(j.drehung)) >= 0 ? Number(j.drehung) : 0;
+      if (dreh) { gedreht = dreh; cv = mpDrehen(cv, dreh); j = await mpKi(cv, true, sek => status("", "🔄 Plan um " + dreh + "° gedreht – wird aufgerichtet und neu gelesen" + s + " … " + sek + " s")); }
+      if (!vorschau) vorschau = cv.toDataURL("image/jpeg", 0.7);
+      (j.daecher || []).forEach(d => daecher.push({ name:String(d.name || "Dachfläche " + (daecher.length + 1)), ausrichtung:/quer/i.test(d.ausrichtung) ? "quer" : "hochkant", dachart:"Ziegel",
+        reihen:(d.reihen || []).map(x => Math.max(0, Math.round(Number(x) || 0))).filter(x => x > 0) }));
+    }
+    if (!daecher.length) { status("fehler", ohne.length ? "⛔ <b>Bitte Strangplan-Seite aus PV*SOL hochladen.</b> In diesem Plan sind keine Modulnummern erkennbar – es wurde nichts gezählt." : "⛔ Im Plan wurden keine Module erkannt."); return; }
+    const kat = await mpKatalog(), module = kat.filter(a => a.kat === "Modul" && mpMasseAusKatalog(a));
+    mpKontrolle(c, { daecher, vorschau, gedreht, module, datei:name });
+  } catch(e) { status("fehler", "⛔ Belegungsplan konnte nicht ausgewertet werden: " + esc(e.message)); }
+}
+/* Ergebnis zur Kontrolle: Reihen, Ausrichtung, Dachart, Modul, Sparren änderbar → Zeichnung */
+function mpKontrolle(c, k){
+  const ki = $("#mpKi");
+  ki.innerHTML = '<div class="mp-info mp-ok">✅ <b>KI-Ergebnis zur Kontrolle</b> – bitte mit dem Plan vergleichen und bei Bedarf ändern, dann „Montageplan zeichnen“.' + (k.gedreht ? ' Plan war um ' + k.gedreht + '° gedreht und wurde aufgerichtet.' : '') + '</div>' +
+    '<div class="mp-kontrolle"><label>Modul<select id="mpModul">' + k.module.map(a => '<option value="' + a.id + '">' + esc(a.name) + '</option>').join("") + '</select></label>' +
+    '<label>Sparrenabstand (cm)<input id="mpSparren" type="number" min="30" max="150" value="65" style="width:90px"></label></div>' +
+    k.daecher.map((d, i) => '<div class="mp-kontrolle" data-mpd="' + i + '"><label>Dachfläche<input data-f="name" value="' + esc(d.name) + '"></label>' +
+      '<label>Module je Reihe (Komma)<input class="mp-reihen" data-f="reihen" value="' + d.reihen.join(", ") + '"></label>' +
+      '<label>Ausrichtung<select data-f="ausrichtung"><option' + (d.ausrichtung === "hochkant" ? " selected" : "") + '>hochkant</option><option' + (d.ausrichtung === "quer" ? " selected" : "") + '>quer</option></select></label>' +
+      '<label>Dachart<select data-f="dachart">' + Object.keys(MP_HAKEN).map(t => '<option>' + t + '</option>').join("") + '</select></label></div>').join("") +
+    '<button class="btn primary" type="button" id="mpZeichnen">📐 Montageplan zeichnen</button>' +
+    (k.vorschau ? '<details class="mp-vorschau" open><summary><b>Plan zum Vergleichen</b></summary><img src="' + k.vorschau + '" alt="Belegungsplan"></details>' : '');
+  $("#mpZeichnen").onclick = () => {
+    const ml = { sparren:Number($("#mpSparren").value) || 65, daecher:[...ki.querySelectorAll("[data-mpd]")].map(row => ({
+      name:row.querySelector('[data-f="name"]').value, ausrichtung:row.querySelector('[data-f="ausrichtung"]').value, dachart:row.querySelector('[data-f="dachart"]').value,
+      reihen:row.querySelector('[data-f="reihen"]').value.split(/[^0-9]+/).map(Number).filter(n => n > 0) })) };
+    const masse = mpMasseAusKatalog(k.module.find(a => a.id === $("#mpModul").value));
+    const sp = { ml, masse, sparren:ml.sparren, datum:new Date().toLocaleDateString("de-DE"), datei:k.datei };
+    try { localStorage.setItem(mpSpeicherKey(c.id), JSON.stringify(sp)); } catch(e) {}
+    mpZeichnen($("#mpBody"), ml, masse, ml.sparren, "KI-Erkennung aus „" + k.datei + "“ (nur in diesem Browser gespeichert)");
+    $("#mpBody").insertAdjacentHTML("beforeend", mpUploadHtml(c, true));
+  };
+}
+/* Klicks im Montageplan-Bereich */
+document.addEventListener("click", async e => {
+  const c = state.customers.find(x => x.id === state.openId); if (!c) return;
+  if (e.target.closest("#mpBtn")) { mpOeffnen(c); return; }
+  if (e.target.closest("[data-mp-upload]")) { $("#mpDatei").click(); return; }
+  if (e.target.closest("[data-mp-plan]")) {
+    try { const b = await fetch(c.plan.url).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.blob(); }); mpAuswerten(c, b, c.plan.name || "Belegungsplan"); }
+    catch(err) { $("#mpKi").innerHTML = '<div class="mp-warn">⛔ Belegungsplan aus Airtable konnte nicht geladen werden (' + esc(err.message) + ') – bitte die Datei mit „Belegungsplan hochladen“ wählen.</div>'; }
+  }
+});
+document.addEventListener("change", e => {
+  if (e.target.id !== "mpDatei") return;
+  const c = state.customers.find(x => x.id === state.openId), f = e.target.files && e.target.files[0]; e.target.value = "";
+  if (c && f) mpAuswerten(c, f, f.name);
+});
 
 /* ===== Speichern (Beacon) ===== */
 const timers={};
