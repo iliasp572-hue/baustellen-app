@@ -272,6 +272,8 @@ const CONFIG = {
   SAVE_URL: "https://hook.eu2.make.com/uf4gr5b22a0x9sdpdp4nv5lpbjp475qn",
   PLAN_URL: "https://hook.eu2.make.com/rh4trtwbt6iti8efl5tseygomjs7j917",
   DEL_URL:  "https://hook.eu2.make.com/lph662moo1sopvj5k9u96b0w1gulb9qc",
+  MAT_URL:  "https://hook.eu2.make.com/9xmi0l3c0gxomg261wqvc9mr1njt1zja",   // Make 9914877: Materialliste aus dem PV-Konfigurator (liste / ersetzen)
+  MAT_KEY:  "mlk7syrink",
   CODE_ADMIN: "7894",   // voller Zugriff
   CODE_MIT:   "1234"    // nur freigegebene Kunden
 };
@@ -544,7 +546,8 @@ function renderDetail(){
     +'</div></div></div>'
     +'<div class="tbl-wrap"><div class="tbl-head"><h4>'+(simple?'Packliste':'Materialliste')+'</h4>'+(simple?'':'<div class="legend">'
     +'<span><i class="sw" style="background:var(--accent-l);border:1px solid #86efac"></i> Div = Benötigt (stimmt)</span>'
-    +'<span><i class="sw" style="background:var(--danger-l);border:1px solid #fca5a5"></i> Abweichung</span></div>')+'</div>'
+    +'<span><i class="sw" style="background:var(--danger-l);border:1px solid #fca5a5"></i> Abweichung</span></div>')
+    +(admin?'<button class="btn primary" id="mlNeuBtn" style="margin-left:auto" title="Liest die Materialliste aus dem unterschriebenen Konfigurator-Angebot und ersetzt nur die noch nicht gepackten Material-Zeilen">🔄 Materialliste neu übernehmen</button>':'')+'</div>'
     +'<div style="overflow-x:auto"><table><thead>'+theadHtml+'</thead><tbody>'+rows+'</tbody></table></div>'
     +(simple
       ? '<div class="hint"><b>Packen:</b> Stückzahl packen, bei <b>Raus</b> eintragen, was mitgeht (grauer Vorschlag = mit Reserve), abhaken. Wenn alles gepackt ist: Foto machen und den grünen Knopf drücken. <b>Nach der Baustelle:</b> Reste zählen und bei <b>Zurück</b> eintragen.</div>'
@@ -565,6 +568,7 @@ function renderDetail(){
     });
   });
   const sb=$("#shareBtn"); if(sb) sb.onclick=e=>openShare(e,c);
+  const mlb=$("#mlNeuBtn"); if(mlb) mlb.onclick=()=>materiallisteNeu(c);
   const fo=$("#fotoBtn"); if(fo) fo.onclick=()=>{
     if(fo.disabled) return;
     c.fotoOk=!c.fotoOk;
@@ -581,6 +585,44 @@ function refreshTiles(c){
   tiles[1].className="tile "+(s.dev>0?"bad":"good");
   tiles[1].querySelector(".v").textContent=s.dev;
   tiles[1].querySelector("div:last-child").textContent=s.dev>0?"Bitte prüfen / nachbestellen":"Alles im grünen Bereich";
+}
+
+/* ===== Materialliste aus dem PV-Konfigurator (ab v21) neu übernehmen =====
+   Liest die im Angebot gespeicherte Materialliste (Datastore 185541, über baustelleId) und ersetzt NUR die
+   noch nicht gepackten Zeilen dieser Artikel. Bereits gepackte Mengen werden abgezogen, damit nichts doppelt
+   ausgebucht wird. Gebucht wird hier nichts – das macht „Lager Auto-Ausbuchen“ beim Packen. */
+const MAT_ARTIKEL = ["Schiene 5,85m","Schiene 4,75m","Schiene 3,6m","Schiene 2,4m","Innenverbinder","Mittelklemmen","Endklemme","Endkappen","Dachhaken L","Bieberschwanz Haken","Dachhaken Falzdach (kein Lager-Artikel)","Dachhaken Trapezblech (kein Lager-Artikel)"];
+async function materiallisteNeu(c){
+  const btn=$("#mlNeuBtn"); if(btn) btn.disabled=true;
+  try{
+    const r=await fetch(CONFIG.MAT_URL+"?action=liste&key="+CONFIG.MAT_KEY+"&b="+encodeURIComponent(c.id)+"&t="+Date.now(),{cache:"no-store"});
+    const j=await r.json().catch(()=>null);
+    if(!j||!j.ok){ alert("Für diese Baustelle ist kein Angebot aus dem PV-Konfigurator verknüpft (oder Make ist nicht erreichbar).\nDie Materialliste gibt es nur für Baustellen, die durch die Unterschrift eines Konfigurator-Angebots entstanden sind."); return; }
+    const ml=j.zustand&&j.zustand.materialliste;
+    if(!ml||!Array.isArray(ml.gesamt)||!ml.gesamt.length){ alert("Im Angebot "+(j.anzeige||j.nr)+" ist keine Materialliste gespeichert.\nIm PV-Konfigurator (ab v21) unter „Materialliste aus Belegungsplan“ erfassen und das Angebot neu speichern."); return; }
+    const namen=new Set(MAT_ARTIKEL.concat(ml.gesamt.map(g=>g.artikel)));
+    const gepackt={}, del=[]; let gepacktZeilen=0;
+    c.materials.forEach(m=>{
+      if(!namen.has(m.name)) return;
+      if(m.gepackt){ gepacktZeilen++; gepackt[m.name]=(gepackt[m.name]||0)+(Number(m.benoetigt)||Number(m.outbound)||0); }
+      else del.push(m.recId);
+    });
+    const neu=ml.gesamt.map(g=>({artikel:g.artikel, menge:Math.max(0,(Number(g.menge)||0)-(gepackt[g.artikel]||0))})).filter(g=>g.menge>0);
+    const txt="Materialliste aus Angebot "+(j.anzeige||j.nr)+" neu übernehmen?\n\n"
+      +"• "+del.length+" noch nicht gepackte Material-Zeile(n) werden ersetzt\n"
+      +"• "+gepacktZeilen+" schon gepackte Zeile(n) bleiben – es kommt nur der Rest dazu\n"
+      +"• "+neu.length+" Zeile(n) neu:\n"+neu.map(g=>"     "+g.menge+" × "+g.artikel).join("\n")
+      +((ml.warnungen&&ml.warnungen.length)?"\n\n⚠️ Warnungen aus dem Konfigurator:\n"+ml.warnungen.join("\n"):"");
+    if(!confirm(txt)) return;
+    const fd=new FormData();
+    fd.append("action","ersetzen"); fd.append("key",CONFIG.MAT_KEY); fd.append("b",c.id); fd.append("del",del.join(",")); fd.append("neu",JSON.stringify(neu));
+    const r2=await fetch(CONFIG.MAT_URL,{method:"POST",body:fd});
+    const j2=await r2.json().catch(()=>null);
+    if(!j2||!j2.ok) throw new Error("Make hat die Übernahme nicht bestätigt");
+    toast("Materialliste übernommen ✓");
+    const id=c.id; await load(); openDetail(id);
+  }catch(e){ toast("Fehler: "+e.message,true); }
+  finally{ const b=$("#mlNeuBtn"); if(b) b.disabled=false; }
 }
 
 /* ===== Speichern (Beacon) ===== */
