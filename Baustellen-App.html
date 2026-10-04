@@ -203,6 +203,9 @@
   .mp-warn ul{margin:6px 0 0 18px;padding:0;font-size:15px}
   .mp-info{background:#e0f2fe;border:1px solid #7dd3fc;color:#075985;border-radius:12px;padding:10px 14px;margin:12px 0;font-size:14.5px;font-weight:600}
   .mp-ok{background:#dcfce7;border:1px solid #86efac;color:#166534}
+  .mp-regeln{background:#f0fdf4;border:1px solid #86efac;color:#14532d;font-weight:700}
+  .mp-regeln ul{margin:6px 0 0 18px;padding:0;font-weight:500}
+  .mp-gelb{background:#fef3c7;border:1px solid #f59e0b;color:#92400e;border-radius:8px;padding:6px 10px;margin:6px 0 0;font-weight:600}
   .mp-dach{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
   .mp-dach h5{flex:1 1 100%;margin:0;font-size:17px;color:var(--ink)}
   .mp-zeichnung{flex:3 1 480px;min-width:0;border:1px solid var(--line);border-radius:12px;background:#fff;padding:6px}
@@ -665,9 +668,10 @@ async function materiallisteNeu(c){
    Strangnummern-Abgleich (wie Konfigurator ab v24): Anzahl gelesener Modulnummern ≠ gezählte Module → rote Warnung.
    Plausibilitätsprüfung hochkant/quer (wie Konfigurator ab v22) in der Kontrollansicht, mit „Reihen ↔ Spalten tauschen“.
    Rechenregeln wie PV-Konfigurator ab v23 (Länge, Schienen-Kombi mit kleinstem Rest, Haken = abrunden(L ÷ 2·Sparren) + 1).
-   Stoß-/Montageregeln: NUR aus Obsidian „05 Wissen/SL Rack Schrägdachsysteme 2026 (Prospekt-Wissen).md“.
-   Diese Notiz enthält (Stand 04.10.2026) KEINE Stoß-, Haken-Abstands- oder Klemmbereichsregeln → im Plan
-   steht eine rote Warnung, Stoßlage und Schienenlage sind nicht gegen Regeln geprüft. */
+   Montageregeln: Syrink-Firmenregeln (Ilias, 04.10.2026), Obsidian „05 Wissen/SL Rack Schrägdachsysteme 2026
+   (Prospekt-Wissen).md“ › „Syrink-Montageregeln“: Stoß egal wo zwischen zwei Haken (Klemmung am Stoß erlaubt),
+   Haken jeder 2. Sparren, Schienen 0–35 cm vom oberen/unteren Modulrand, Überstand 60 mm hinter der Endklemme,
+   Innenverbinder 10 Nm. Liegt ein Stoß hinter dem letzten Haken (angenommene Sparrenlage) → gelber Hinweis. */
 const MP_LAENGEN = [
   { mm:5850, t:"5,85 m", farbe:"#1565C0", fname:"blau" },
   { mm:4750, t:"4,75 m", farbe:"#2E7D32", fname:"grün" },
@@ -676,11 +680,13 @@ const MP_LAENGEN = [
 ];
 const MP_FUGE = 20, MP_RAND = 60;
 const MP_HAKEN = { "Ziegel":"Dachhaken L (Ziegel)", "Biberschwanz":"Bieberschwanz Haken", "Falz":"Dachhaken Falzdach", "Trapez":"Dachhaken Trapezblech" };
-const MP_REGELN_FEHLEN = [
-  "wo der Schienenstoß / Innenverbinder sitzen darf",
-  "Mindestabstand Stoß ↔ Dachhaken",
-  "Lage der Schienen am Modul (Klemmbereich laut Modul-Datenblatt)",
-  "Überstand der Schienen über das Modulfeld und Lage der Sparren"
+const MP_SCHIENE_MAX = 350, MP_NM = 10;   /* Schiene max. 35 cm vom Modulrand · Anzugsmoment Innenverbinder RAIL 2.0 */
+const MP_REGELN = [
+  "<b>Stoß / Innenverbinder:</b> egal wo zwischen zwei Dachhaken – Klemmung direkt am Stoß erlaubt (SL Rack Produktseite)",
+  "<b>Dachhaken:</b> immer jeder 2. Sparren (RAIL 40)",
+  "<b>Schienenlage:</b> 0–35 cm vom oberen bzw. unteren Modulrand (Maß in der Zeichnung)",
+  "<b>Überstand:</b> 60 mm hinter der Endklemme",
+  "<b>Innenverbinder RAIL 2.0:</b> Anzugsmoment " + MP_NM + " Nm, Torx 40, von beiden Seiten (SL-Rack-Produktblatt RAILs)"
 ];
 const mpM = mm => (mm / 1000).toLocaleString("de-DE", { minimumFractionDigits:2, maximumFractionDigits:3 }) + " m";
 const mpCm = mm => (Math.round(mm) / 10).toLocaleString("de-DE", { maximumFractionDigits:1 }) + " cm";
@@ -705,7 +711,9 @@ function mpReihe(n, breite, sparrenMm){
   const k = mpKombi(L), stuecke = [];
   MP_LAENGEN.forEach((s, i) => { for (let z = 0; z < k.teile[i]; z++) stuecke.push(s.mm); });
   const schnitt = k.rest > 0 ? { index:stuecke.length - 1, von:stuecke[stuecke.length - 1], auf:stuecke[stuecke.length - 1] - k.rest, ab:k.rest } : null;
-  return { n, L, k, stuecke, schnitt, haken:Math.floor(L / (2 * sparrenMm)) + 1 };
+  const haken = Math.floor(L / (2 * sparrenMm)) + 1, letzterHaken = (haken - 1) * 2 * sparrenMm, stossAussen = [];
+  stuecke.slice(0, -1).reduce((p, mm) => { p += mm; if (p > letzterHaken) stossAussen.push(p); return p; }, 0);   /* Stoß muss zwischen zwei Haken liegen */
+  return { n, L, k, stuecke, schnitt, haken, stossAussen };
 }
 function mpMasseAusKatalog(a){
   if (!a) return null;
@@ -812,8 +820,16 @@ function mpSvg(dach, masse, sparrenCm){
   rows.forEach((r, i) => {
     const y0 = i * (hMod + gap);
     g += '<text x="' + (-links + fs * 0.3) + '" y="' + (y0 + hMod / 2 + fs * 0.35) + '" font-size="' + fs * 1.05 + '" font-weight="700" fill="#0f172a">R' + (i + 1) + '</text>';
-    [0.25, 0.75].forEach(f => {
-      const y = y0 + hMod * f, dick = fs * 0.45;
+    /* Schienenlage: so nah an ¼ Modulhöhe wie möglich, höchstens 35 cm vom Modulrand – Maß im ersten Modul */
+    const ab = Math.min(hMod / 4, MP_SCHIENE_MAX), xm = MP_RAND + wRow / 2, sw = fs * 0.07, fm = Math.min(fs * 0.9, ab * 0.45);
+    [[y0, y0 + ab], [y0 + hMod - ab, y0 + hMod]].forEach(([ya, yb]) => {
+      g += '<line x1="' + xm + '" y1="' + ya + '" x2="' + xm + '" y2="' + yb + '" stroke="#b45309" stroke-width="' + sw + '"/>' +
+           '<line x1="' + (xm - fs * 0.3) + '" y1="' + ya + '" x2="' + (xm + fs * 0.3) + '" y2="' + ya + '" stroke="#b45309" stroke-width="' + sw + '"/>' +
+           '<line x1="' + (xm - fs * 0.3) + '" y1="' + yb + '" x2="' + (xm + fs * 0.3) + '" y2="' + yb + '" stroke="#b45309" stroke-width="' + sw + '"/>' +
+           '<text x="' + (xm + fs * 0.4) + '" y="' + ((ya + yb) / 2 + fm * 0.36) + '" font-size="' + fm + '" font-weight="700" fill="#b45309">0–35 cm</text>';
+    });
+    [ab, hMod - ab].forEach(dy => {
+      const y = y0 + dy, dick = fs * 0.45;
       let x = 0;
       r.stuecke.forEach((mm, si) => {
         const len = (r.schnitt && si === r.schnitt.index) ? r.schnitt.auf : mm;
@@ -856,7 +872,7 @@ function mpListeHtml(z){
     const zs = Object.keys(z.schnitte).filter(k => +k.split("|")[0] === s.mm).map(k => '<span class="mp-schnitt">' + z.schnitte[k] + '× auf ' + mpM(+k.split("|")[1]) + ' kürzen</span> (' + mpCm(s.mm - +k.split("|")[1]) + ' ab)').join("<br>");
     h += zeile('<span class="mp-fb" style="background:' + s.farbe + '"></span> ' + s.fname, 'Schiene ' + s.t, '<span style="color:' + s.farbe + '">' + n + '</span>', zs);
   });
-  h += zeile('<span class="mp-fb" style="background:#dc2626"></span> rot', 'Innenverbinder', '<span style="color:#dc2626">' + z.verb + '</span>');
+  h += zeile('<span class="mp-fb" style="background:#dc2626"></span> rot', 'Innenverbinder RAIL 2.0 <b>(' + MP_NM + ' Nm)</b>', '<span style="color:#dc2626">' + z.verb + '</span>');
   Object.keys(z.hakenTyp).forEach(t => {
     const ohneLager = t === "Falz" || t === "Trapez";
     h += zeile('<span class="mp-punkt"></span> Punkt', (MP_HAKEN[t] || "Dachhaken") + (ohneLager ? ' <b style="color:#dc2626">– KEIN Lager-Artikel</b>' : ''),'<span style="color:' + (ohneLager ? '#dc2626' : '#0f172a') + '">' + z.hakenTyp[t] + '</span>');
@@ -868,16 +884,17 @@ function mpZuschnittJeSchiene(rows){
   return '<ul class="mp-zs">' + rows.map((r, i) => '<li><b>Reihe ' + (i + 1) + '</b> (beide Schienen, ' + mpM(r.L) + '): ' +
     r.stuecke.map(mm => '<span style="color:' + mpL(mm).farbe + ';font-weight:800">' + mpL(mm).t + '</span>').join(" + ") +
     (r.schnitt ? ' → <span class="mp-schnitt">' + mpL(r.schnitt.von).t + ' auf ' + mpM(r.schnitt.auf) + ' kürzen (' + mpCm(r.schnitt.ab) + ' ab)</span>' : ' → <b style="color:#166534">passt ohne Zuschnitt</b>') +
-    ' · ' + (r.stuecke.length - 1) + ' Verbinder · <b>' + r.haken + '</b> Haken je Schiene</li>').join("") + '</ul>';
+    ' · ' + (r.stuecke.length - 1) + ' Verbinder' + (r.stuecke.length > 1 ? ' (' + MP_NM + ' Nm)' : '') + ' · <b>' + r.haken + '</b> Haken je Schiene' +
+    (r.stossAussen.length ? '<div class="mp-gelb">⚠ Stoß bei ' + r.stossAussen.map(mpM).join(", ") + ' liegt hinter dem letzten Haken (Sparrenlage angenommen) – Haken so setzen, dass der Stoß zwischen zwei Haken liegt.</div>' : '') +
+    '</li>').join("") + '</ul>';
 }
 
 /* ---------- Gesamtansicht ---------- */
 function mpZeichnen(box, ml, masse, sparrenCm, quelle){
   const daecher = (ml.daecher || []).filter(d => (d.reihen || []).some(n => n > 0));
-  let h = '<div class="mp-warn">⛔ Stoß- und Montageregeln fehlen im Prospekt-Wissen („SL Rack Schrägdachsysteme 2026“). Im Plan NICHT gegen Regeln geprüft:<ul>' +
-          MP_REGELN_FEHLEN.map(x => '<li>' + esc(x) + '</li>').join("") + '</ul>Stöße und Schienenlage sind nur schematisch eingezeichnet – vor Ort nach SL-Rack-Montageanleitung prüfen.</div>';
+  let h = '<div class="mp-info mp-regeln">📏 Syrink-Montageregeln<ul>' + MP_REGELN.map(x => '<li>' + x + '</li>').join("") + '</ul></div>';
   h += '<div class="mp-info">Quelle: <b>' + esc(quelle) + '</b> · Modul ' + masse.lang + ' × ' + masse.kurz + ' mm · Sparrenabstand <b>' + sparrenCm + ' cm</b> · Reihen linksbündig gezeichnet' +
-       '<br><span class="mp-fb" style="background:#1565C0"></span> 5,85 m &nbsp;<span class="mp-fb" style="background:#2E7D32"></span> 4,75 m &nbsp;<span class="mp-fb" style="background:#7B1FA2"></span> 3,6 m &nbsp;<span class="mp-fb" style="background:#F9A825"></span> 2,4 m &nbsp;<span class="mp-fb" style="background:#dc2626"></span> Verbinder &nbsp;<b style="color:#dc2626">|</b> Schnitt &nbsp;<span class="mp-punkt"></span> Dachhaken</div>';
+       '<br><span class="mp-fb" style="background:#1565C0"></span> 5,85 m &nbsp;<span class="mp-fb" style="background:#2E7D32"></span> 4,75 m &nbsp;<span class="mp-fb" style="background:#7B1FA2"></span> 3,6 m &nbsp;<span class="mp-fb" style="background:#F9A825"></span> 2,4 m &nbsp;<span class="mp-fb" style="background:#dc2626"></span> Verbinder &nbsp;<b style="color:#dc2626">|</b> Schnitt &nbsp;<span class="mp-punkt"></span> Dachhaken &nbsp;<b style="color:#b45309">↕ 0–35 cm</b> Schiene ↔ Modulrand</div>';
   const gesamt = { laengen:{}, schnitte:{}, verb:0, mk:0, ek:0, kap:0, haken:0, hakenTyp:{} };
   daecher.forEach(d => {
     const zz = mpSvg(d, masse, sparrenCm), z = mpZaehlen(zz.rows, d.dachart || "Ziegel");
