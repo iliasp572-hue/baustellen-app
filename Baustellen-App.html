@@ -659,8 +659,11 @@ async function materiallisteNeu(c){
 /* ===== Montageplan für den Monteur =====
    Datenquelle: im unterschriebenen Konfigurator-Angebot gespeicherte Materialliste (Make 9914877, Route liste).
    Gibt es keine, kann das Büro einen Belegungsplan hochladen → dieselbe KI-Erkennung wie im Konfigurator
-   (Route starten/ergebnis) → Ergebnis zur Kontrolle (änderbar) → Zeichnung. Dieses Ergebnis wird nur in
-   diesem Browser gespeichert.
+   (Route starten/ergebnis) → Ergebnis zur Kontrolle (änderbar) → Zeichnung. Das geprüfte Ergebnis wird ZENTRAL
+   an der Baustelle gespeichert (Airtable Baustellen „Montageplan (KI)“, Make 9914877 Route plan_speichern /
+   plan_laden) – so sieht der Monteur denselben Plan auf seinem Handy.
+   Strangnummern-Abgleich (wie Konfigurator ab v24): Anzahl gelesener Modulnummern ≠ gezählte Module → rote Warnung.
+   Plausibilitätsprüfung hochkant/quer (wie Konfigurator ab v22) in der Kontrollansicht, mit „Reihen ↔ Spalten tauschen“.
    Rechenregeln wie PV-Konfigurator ab v23 (Länge, Schienen-Kombi mit kleinstem Rest, Haken = abrunden(L ÷ 2·Sparren) + 1).
    Stoß-/Montageregeln: NUR aus Obsidian „05 Wissen/SL Rack Schrägdachsysteme 2026 (Prospekt-Wissen).md“.
    Diese Notiz enthält (Stand 04.10.2026) KEINE Stoß-, Haken-Abstands- oder Klemmbereichsregeln → im Plan
@@ -720,6 +723,72 @@ async function mpKatalog(){
   MP_KATALOG = ((j && j.katalog && j.katalog.records) || []).map(x => { const f = x.fields || {};
     return { id:x.id, name:f.fldZKRshSWTobcpm0 || "", kat:f.fldYWDj11G2im36KU || "", langtext:f.fldL9BQpZiZ8HIpjF || "" }; });
   return MP_KATALOG;
+}
+
+/* ---------- Plausibilität hochkant/quer (wie PV-Konfigurator ab v22) ----------
+   Die KI misst im gesendeten Bild m = Breite/Höhe EINES Moduls und f = Breite/Höhe des ganzen Modulfelds.
+   Passen die Seitenverhältnisse nicht zu Reihen/Spalten + Ausrichtung (Plan aufrecht ODER um 90° gedreht im Bild;
+   Toleranz Modul Faktor 1,5 · Modulfeld Faktor 2) → rote Warnung „Plan evtl. gedreht“. */
+function mpMessungAusKi(d, breite, hoehe){
+  const ok = v => v > 0.05 && v < 20, fe = d.feld || {}, b = Number(fe.b), h = Number(fe.h);
+  const m = Number(d.modul_bh), f = (b > 0 && b <= 1.05 && h > 0 && h <= 1.05 && breite > 0 && hoehe > 0) ? (b * breite) / (h * hoehe) : null;
+  const out = {};
+  if (ok(m)) out.m = Math.round(m * 1000) / 1000;
+  if (ok(Number(f))) out.f = Math.round(f * 1000) / 1000;
+  return (out.m || out.f) ? out : null;
+}
+/* Reihen ↔ Spalten tauschen (Module linksbündig gedacht): [2,2,2,2,2,2,2] → [7,7], [1,4,4] → [3,2,2,2] */
+function mpTransponiert(reihen){
+  const n = reihen.filter(x => x > 0), max = n.length ? Math.max.apply(null, n) : 0, out = [];
+  for (let i = 0; i < max; i++) out.push(n.filter(x => x > i).length);
+  return out.length ? out : [0];
+}
+function mpPlausi(d, masse){
+  const mm = d.messung, n = d.reihen.filter(x => x > 0);
+  if (!mm || !masse || !n.length) return null;
+  const passt = (mess, soll, tol) => mess == null || Math.abs(Math.log(mess / soll)) <= Math.log(tol);
+  const pruef = (reihen, ausr) => {
+    const hk = ausr !== "quer", wRow = hk ? masse.kurz : masse.lang, hMod = hk ? masse.lang : masse.kurz;
+    const pm = wRow / hMod, pf = (Math.max.apply(null, reihen) * wRow) / (reihen.length * hMod);
+    return (passt(mm.m, pm, 1.5) && passt(mm.f, pf, 2)) || (passt(mm.m, 1 / pm, 1.5) && passt(mm.f, 1 / pf, 2));
+  };
+  if (pruef(n, d.ausrichtung)) return null;
+  const t = mpTransponiert(n), anders = d.ausrichtung === "quer" ? "hochkant" : "quer";
+  return { tausch: pruef(t, d.ausrichtung), ausrichtung: pruef(n, anders) ? anders : "", tauschVorschau: t };
+}
+function mpPlausiText(d, p){
+  return "Plan evtl. gedreht – Reihen/Spalten prüfen! Die Seitenverhältnisse im Plan passen nicht zu " + d.reihen.filter(x => x > 0).length +
+    " Reihe(n) mit bis zu " + Math.max.apply(null, d.reihen.concat([0])) + " Modulen " + d.ausrichtung + "." +
+    (p.tausch ? " Mit „Reihen ↔ Spalten tauschen“ (" + p.tauschVorschau.join(" / ") + ") würde es passen." : "") +
+    (p.ausrichtung && !p.tausch ? " Mit Ausrichtung „" + p.ausrichtung + "“ würde es passen." : "") +
+    (!p.tausch && !p.ausrichtung ? " Bitte Reihen, Module je Reihe und Ausrichtung mit dem Plan vergleichen." : "");
+}
+
+/* ---------- Strangnummern-Abgleich (wie PV-Konfigurator v24) ---------- */
+function mpNummernNorm(x){
+  if (!Array.isArray(x)) return null;
+  const out = [];
+  x.forEach(n => { const t = String(n == null ? "" : n).replace(/\s+/g, "");
+    if (/^[A-Za-z0-9][A-Za-z0-9.\-\/]{0,19}$/.test(t) && /\d/.test(t) && out.indexOf(t) < 0 && out.length < 400) out.push(t); });
+  return out;
+}
+function mpNummernLuecken(nr){
+  const gruppen = {}, out = [];
+  nr.forEach(t => { const m = t.match(/^(.*\D)(\d+)$/); if (m) (gruppen[m[1]] = gruppen[m[1]] || []).push(+m[2]); });
+  Object.keys(gruppen).sort().forEach(p => { const z = gruppen[p], max = Math.max.apply(null, z);
+    if (max <= 60) for (let i = 1; i <= max; i++) if (z.indexOf(i) < 0) out.push(p + i); });
+  return out;
+}
+/* null = passt (oder keine Nummern-Liste, z. B. Angebot vor v24 / von Hand) */
+function mpStrang(d){
+  if (!Array.isArray(d.nummern)) return null;
+  const gezaehlt = (d.reihen || []).reduce((s, n) => s + (n > 0 ? n : 0), 0), gelesen = d.nummern.length;
+  return gelesen === gezaehlt ? null : { gelesen, gezaehlt, luecken:mpNummernLuecken(d.nummern) };
+}
+function mpStrangText(s){
+  return "Strangnummern-Abgleich: " + (s.gelesen ? s.gelesen + " Modulnummern im Plan gelesen" : "keine Modulnummern gelesen") + ", aber " + s.gezaehlt +
+    " Module gezählt – Reihen mit dem Plan prüfen!" +
+    (s.luecken.length ? " Lücke in der Nummernfolge: " + s.luecken.slice(0, 8).join(", ") + (s.luecken.length > 8 ? " …" : "") + "." : "");
 }
 
 /* ---------- Zeichnung (Draufsicht, maßstäblich in mm) ---------- */
@@ -813,7 +882,9 @@ function mpZeichnen(box, ml, masse, sparrenCm, quelle){
   daecher.forEach(d => {
     const zz = mpSvg(d, masse, sparrenCm), z = mpZaehlen(zz.rows, d.dachart || "Ziegel");
     mpAddiere(gesamt, z);
+    const st = mpStrang(d);
     h += '<div class="mp-dach"><h5>' + esc(d.name || "Dachfläche") + ' · ' + esc(d.ausrichtung || "hochkant") + ' · ' + esc(d.dachart || "Ziegel") + '</h5>' +
+         (st ? '<div class="mp-warn" style="flex:1 1 100%;margin:0">⛔ ' + esc(mpStrangText(st)) + '</div>' : '') +
          '<div class="mp-zeichnung">' + zz.svg + '</div><div class="mp-liste">' + mpListeHtml(z) + '<div class="mp-hinweis"><b>Zuschnitt je Schiene:</b></div>' + mpZuschnittJeSchiene(zz.rows) + '</div></div>';
   });
   if (daecher.length > 1) h += '<div class="mp-dach"><h5>Gesamt – alle Dachflächen</h5><div class="mp-liste" style="flex:1 1 100%">' + mpListeHtml(gesamt) + '</div></div>';
@@ -821,9 +892,18 @@ function mpZeichnen(box, ml, masse, sparrenCm, quelle){
   box.innerHTML = h;
 }
 
-/* ---------- Laden: gespeicherte Materialliste oder KI-Erkennung ---------- */
-const mpSpeicherKey = id => "montageplan_" + id;
-function mpLokal(id){ try { return JSON.parse(localStorage.getItem(mpSpeicherKey(id)) || "null"); } catch(e) { return null; } }
+/* ---------- Laden: Materialliste aus dem Angebot, sonst zentral gespeicherter KI-Montageplan der Baustelle ---------- */
+function mpPlanOk(p){ return !!(p && p.ml && Array.isArray(p.ml.daecher) && p.masse && p.masse.lang > 0 && p.masse.kurz > 0 && Number(p.sparren) > 0); }
+function mpPlanQuelle(p){ return "KI-Erkennung aus „" + (p.datei || "Belegungsplan") + "“ vom " + (p.datum || "?") + (p.modulName ? " · " + p.modulName : "") + " · an der Baustelle gespeichert"; }
+async function mpPlanSpeichern(c, p){
+  const fd = new FormData();
+  fd.append("action", "plan_speichern"); fd.append("key", CONFIG.MAT_KEY); fd.append("b", c.id);
+  fd.append("plan", JSON.stringify(JSON.stringify(p)));   /* als EIN JSON-Text – Make prüft das und schreibt ihn unverändert ins Feld */
+  const t = await fetch(CONFIG.MAT_URL, { method:"POST", body:fd }).then(r => r.text());
+  let j = null; try { j = JSON.parse(t); } catch(e) {}
+  if (!j || j.ok !== 1) throw new Error((j && j.fehler) || "Make hat das Speichern nicht bestätigt");
+}
+let MP_OFFEN = null;   /* Plan, dessen Speichern fehlgeschlagen ist (Knopf „Nochmal speichern“) */
 async function mpOeffnen(c){
   const box = $("#mpBody"); box.innerHTML = '<div class="mp-info">⏳ Montageplan wird geladen …</div>';
   try {
@@ -837,13 +917,20 @@ async function mpOeffnen(c){
       mpZeichnen(box, ml, masse, Number(ml.sparren) || 65, "Materialliste aus Angebot " + (j.anzeige || j.nr));
       return;
     }
-    const lokal = mpLokal(c.id);
-    if (lokal && lokal.ml) {
-      mpZeichnen(box, lokal.ml, lokal.masse, lokal.sparren, "KI-Erkennung vom " + (lokal.datum || "?") + " (nur in diesem Browser gespeichert)");
+    let p = null, ladeFehler = "";
+    try {
+      const t = await fetch(CONFIG.MAT_URL + "?action=plan_laden&key=" + CONFIG.MAT_KEY + "&b=" + encodeURIComponent(c.id) + "&t=" + Date.now(), { cache:"no-store" }).then(r => r.text());
+      let pj = null; try { pj = JSON.parse(t); } catch(e) { ladeFehler = "gespeicherter Montageplan ist nicht lesbar"; }
+      if (pj && pj.ok === 1) p = pj.plan; else if (pj) ladeFehler = pj.fehler || "keine gültige Antwort";
+    } catch(e) { ladeFehler = "keine Verbindung"; }
+    if (mpPlanOk(p)) {
+      mpZeichnen(box, p.ml, p.masse, Number(p.sparren), mpPlanQuelle(p));
       if (state.access === "admin") box.insertAdjacentHTML("beforeend", mpUploadHtml(c, true));
       return;
     }
-    box.innerHTML = '<div class="mp-info">Für diese Baustelle ist keine Materialliste aus einem Konfigurator-Angebot gespeichert.</div>' +
+    if (p && !ladeFehler) ladeFehler = "gespeicherter Montageplan ist unvollständig";
+    box.innerHTML = (ladeFehler ? '<div class="mp-warn">⛔ Montageplan der Baustelle konnte nicht geladen werden (' + esc(ladeFehler) + ').</div>' : '') +
+      '<div class="mp-info">Für diese Baustelle ist weder eine Materialliste aus einem Konfigurator-Angebot noch ein Montageplan gespeichert.</div>' +
       (state.access === "admin" ? mpUploadHtml(c, false) : '<div class="mp-warn">⛔ Noch kein Montageplan – bitte das Büro, den Belegungsplan auszuwerten.</div>');
   } catch(e) {
     box.innerHTML = '<div class="mp-warn">⛔ Montageplan konnte nicht geladen werden: ' + esc(e.message) + '</div>';
@@ -916,7 +1003,8 @@ async function mpAuswerten(c, blob, name){
       if (dreh) { gedreht = dreh; cv = mpDrehen(cv, dreh); j = await mpKi(cv, true, sek => status("", "🔄 Plan um " + dreh + "° gedreht – wird aufgerichtet und neu gelesen" + s + " … " + sek + " s")); }
       if (!vorschau) vorschau = cv.toDataURL("image/jpeg", 0.7);
       (j.daecher || []).forEach(d => daecher.push({ name:String(d.name || "Dachfläche " + (daecher.length + 1)), ausrichtung:/quer/i.test(d.ausrichtung) ? "quer" : "hochkant", dachart:"Ziegel",
-        reihen:(d.reihen || []).map(x => Math.max(0, Math.round(Number(x) || 0))).filter(x => x > 0) }));
+        reihen:(d.reihen || []).map(x => Math.max(0, Math.round(Number(x) || 0))).filter(x => x > 0), nummern:mpNummernNorm(d.nummern),
+        messung:mpMessungAusKi(d, cv.width, cv.height) }));
     }
     if (!daecher.length) { status("fehler", ohne.length ? "⛔ <b>Bitte Strangplan-Seite aus PV*SOL hochladen.</b> In diesem Plan sind keine Modulnummern erkennbar – es wurde nichts gezählt." : "⛔ Im Plan wurden keine Module erkannt."); return; }
     const kat = await mpKatalog(), module = kat.filter(a => a.kat === "Modul" && mpMasseAusKatalog(a));
@@ -932,17 +1020,49 @@ function mpKontrolle(c, k){
     k.daecher.map((d, i) => '<div class="mp-kontrolle" data-mpd="' + i + '"><label>Dachfläche<input data-f="name" value="' + esc(d.name) + '"></label>' +
       '<label>Module je Reihe (Komma)<input class="mp-reihen" data-f="reihen" value="' + d.reihen.join(", ") + '"></label>' +
       '<label>Ausrichtung<select data-f="ausrichtung"><option' + (d.ausrichtung === "hochkant" ? " selected" : "") + '>hochkant</option><option' + (d.ausrichtung === "quer" ? " selected" : "") + '>quer</option></select></label>' +
-      '<label>Dachart<select data-f="dachart">' + Object.keys(MP_HAKEN).map(t => '<option>' + t + '</option>').join("") + '</select></label></div>').join("") +
-    '<button class="btn primary" type="button" id="mpZeichnen">📐 Montageplan zeichnen</button>' +
+      '<label>Dachart<select data-f="dachart">' + Object.keys(MP_HAKEN).map(t => '<option>' + t + '</option>').join("") + '</select></label></div>' +
+      '<div data-mpplausi="' + i + '"></div><div data-mpstrang="' + i + '"></div>').join("") +
+    '<button class="btn primary" type="button" id="mpZeichnen">📐 Montageplan zeichnen und an der Baustelle speichern</button>' +
     (k.vorschau ? '<details class="mp-vorschau" open><summary><b>Plan zum Vergleichen</b></summary><img src="' + k.vorschau + '" alt="Belegungsplan"></details>' : '');
-  $("#mpZeichnen").onclick = () => {
-    const ml = { sparren:Number($("#mpSparren").value) || 65, daecher:[...ki.querySelectorAll("[data-mpd]")].map(row => ({
-      name:row.querySelector('[data-f="name"]').value, ausrichtung:row.querySelector('[data-f="ausrichtung"]').value, dachart:row.querySelector('[data-f="dachart"]').value,
-      reihen:row.querySelector('[data-f="reihen"]').value.split(/[^0-9]+/).map(Number).filter(n => n > 0) })) };
+  const reihenAus = row => row.querySelector('[data-f="reihen"]').value.split(/[^0-9]+/).map(Number).filter(n => n > 0);
+  const strangLive = () => ki.querySelectorAll("[data-mpd]").forEach(row => {
+    const i = +row.dataset.mpd, st = mpStrang({ reihen:reihenAus(row), nummern:k.daecher[i].nummern }), box = ki.querySelector('[data-mpstrang="' + i + '"]');
+    if (box) box.innerHTML = st ? '<div class="mp-warn" style="margin:0 0 10px">⛔ ' + esc(mpStrangText(st)) + '</div>' :
+      (Array.isArray(k.daecher[i].nummern) ? '<div class="mp-info mp-ok" style="margin:0 0 10px">✓ Strangnummern-Abgleich: ' + k.daecher[i].nummern.length + ' Nummern gelesen = ' + reihenAus(row).reduce((a, n) => a + n, 0) + ' Module gezählt</div>' : '');
+  });
+  const plausiLive = () => {
     const masse = mpMasseAusKatalog(k.module.find(a => a.id === $("#mpModul").value));
-    const sp = { ml, masse, sparren:ml.sparren, datum:new Date().toLocaleDateString("de-DE"), datei:k.datei };
-    try { localStorage.setItem(mpSpeicherKey(c.id), JSON.stringify(sp)); } catch(e) {}
-    mpZeichnen($("#mpBody"), ml, masse, ml.sparren, "KI-Erkennung aus „" + k.datei + "“ (nur in diesem Browser gespeichert)");
+    ki.querySelectorAll("[data-mpd]").forEach(row => {
+      const i = +row.dataset.mpd, box = ki.querySelector('[data-mpplausi="' + i + '"]'); if (!box) return;
+      const d = { reihen:reihenAus(row), ausrichtung:row.querySelector('[data-f="ausrichtung"]').value, messung:k.daecher[i].messung }, p = mpPlausi(d, masse);
+      box.innerHTML = p ? '<div class="mp-warn" style="margin:0 0 10px">⛔ ' + esc(mpPlausiText(d, p)) +
+        (p.tausch ? '<br><button class="btn" type="button" data-mp-tausch="' + i + '" style="margin-top:8px">↻ Jetzt Reihen ↔ Spalten tauschen</button>' : '') + '</div>' : '';
+    });
+  };
+  const pruefenLive = () => { plausiLive(); strangLive(); };
+  ki.oninput = pruefenLive; pruefenLive();
+  ki.onclick = e => {
+    const t = e.target.closest("[data-mp-tausch]"); if (!t) return;
+    const row = ki.querySelector('[data-mpd="' + t.dataset.mpTausch + '"]'); if (!row) return;
+    row.querySelector('[data-f="reihen"]').value = mpTransponiert(reihenAus(row)).join(", ");
+    pruefenLive();
+  };
+  $("#mpZeichnen").onclick = async () => {
+    const rein = t => String(t == null ? "" : t).replace(/[<>]/g, "").trim().slice(0, 80);   /* keine spitzen Klammern ins zentrale Feld */
+    const ml = { sparren:Number($("#mpSparren").value) || 65, daecher:[...ki.querySelectorAll("[data-mpd]")].map(row => { const i = +row.dataset.mpd; return {
+      name:rein(row.querySelector('[data-f="name"]').value) || "Dachfläche " + (i + 1), ausrichtung:row.querySelector('[data-f="ausrichtung"]').value, dachart:row.querySelector('[data-f="dachart"]').value,
+      reihen:reihenAus(row), nummern:k.daecher[i].nummern || null }; }) };
+    const modul = k.module.find(a => a.id === $("#mpModul").value), masse = mpMasseAusKatalog(modul);
+    if (!masse) { toast("Für dieses Modul fehlen die Maße im PV-Katalog", true); return; }
+    const p = { v:1, ml, masse, sparren:ml.sparren, modulId:modul.id, modulName:rein(modul.name), datum:new Date().toLocaleDateString("de-DE"), datei:rein(k.datei), gedreht:k.gedreht || 0 };
+    const btn = $("#mpZeichnen"); btn.disabled = true; btn.textContent = "⏳ wird an der Baustelle gespeichert …";
+    let fehler = "";
+    try { await mpPlanSpeichern(c, p); } catch(e) { fehler = e.message; }
+    if (state.openId !== c.id) return;   /* inzwischen andere Baustelle geöffnet */
+    mpZeichnen($("#mpBody"), ml, masse, ml.sparren, fehler ? "KI-Erkennung aus „" + p.datei + "“ – NICHT gespeichert" : mpPlanQuelle(p));
+    if (fehler) { MP_OFFEN = { id:c.id, p };
+      $("#mpBody").insertAdjacentHTML("afterbegin", '<div class="mp-warn">⛔ Montageplan konnte NICHT an der Baustelle gespeichert werden (' + esc(fehler) + ') – der Monteur sieht ihn so noch nicht. <button class="btn" type="button" data-mp-retry>Nochmal speichern</button></div>'); }
+    else toast("Montageplan an der Baustelle gespeichert ✓");
     $("#mpBody").insertAdjacentHTML("beforeend", mpUploadHtml(c, true));
   };
 }
@@ -951,6 +1071,12 @@ document.addEventListener("click", async e => {
   const c = state.customers.find(x => x.id === state.openId); if (!c) return;
   if (e.target.closest("#mpBtn")) { mpOeffnen(c); return; }
   if (e.target.closest("[data-mp-upload]")) { $("#mpDatei").click(); return; }
+  if (e.target.closest("[data-mp-retry]")) {
+    if (!MP_OFFEN || MP_OFFEN.id !== c.id) return;
+    try { await mpPlanSpeichern(c, MP_OFFEN.p); MP_OFFEN = null; toast("Montageplan an der Baustelle gespeichert ✓"); mpOeffnen(c); }
+    catch(err) { toast("Fehler: " + err.message, true); }
+    return;
+  }
   if (e.target.closest("[data-mp-plan]")) {
     try { const b = await fetch(c.plan.url).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.blob(); }); mpAuswerten(c, b, c.plan.name || "Belegungsplan"); }
     catch(err) { $("#mpKi").innerHTML = '<div class="mp-warn">⛔ Belegungsplan aus Airtable konnte nicht geladen werden (' + esc(err.message) + ') – bitte die Datei mit „Belegungsplan hochladen“ wählen.</div>'; }
