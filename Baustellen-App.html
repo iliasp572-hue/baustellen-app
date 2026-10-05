@@ -194,6 +194,15 @@
   .pop button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;padding:10px 12px;border-radius:8px;font-weight:600;font-size:14px;color:var(--ink);text-align:left}
   .pop button:hover{background:#f1f5f9}
   .pop .wa{color:#25D366}
+  .pop .pop-uhr{display:flex;align-items:center;gap:8px;padding:8px 12px 10px;border-bottom:1px solid var(--line);margin-bottom:4px;font-size:13px;font-weight:700;color:var(--muted)}
+  .pop .pop-uhr input{font-size:16px;font-weight:700;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-family:inherit;color:var(--ink)}
+  .plan-box{grid-column:1/-1}
+  .plan-files{display:flex;flex-direction:column;gap:10px}
+  .plan-file a.thumb{text-decoration:none}
+  .mp-in{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  .mp-in .mp-kopf h4{text-transform:none;letter-spacing:0;color:var(--ink);font-size:15px}
+  .pv-wrap{max-width:980px;margin:0 auto;padding:16px 14px 40px}
+  .pv-nav{display:inline-flex;align-items:center;gap:7px;margin-top:12px;background:#16a34a;color:#fff;text-decoration:none;font-weight:700;padding:11px 16px;border-radius:11px;font-size:15px}
 
   /* ===== Montageplan (Dachflächen-Zeichnung für den Monteur) ===== */
   .mp-sec{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px}
@@ -297,9 +306,14 @@
   </div>
 </div>
 
+<!-- Plan-Ansicht für den WhatsApp-Link (?plan=<Baustellen-ID>): nur lesen, ohne Code -->
+<div id="planView" class="pv-wrap hide"></div>
+
 <div class="toast" id="toast"></div>
 <div class="pop" id="sharePop">
+  <label class="pop-uhr">Uhrzeit Termin <input type="time" id="shareUhr" step="900"></label>
   <button class="wa" data-a="wa"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2Zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.8-.6-3-1.3-5-4.4-5.1-4.6-.2-.2-1.3-1.7-1.3-3.2 0-1.5.8-2.3 1.1-2.6.3-.3.6-.4.8-.4h.6c.2 0 .5 0 .7.5l.9 2.1c.1.2.1.4 0 .6l-.4.6c-.2.2-.4.4-.2.7.2.4.9 1.4 1.9 2.3 1.3 1.1 2.2 1.4 2.5 1.6.2.1.4.1.6-.1l.8-1c.2-.2.4-.2.6-.1l2 1c.3.1.4.2.5.3.1.2.1.8-.1 1.4Z"/></svg>Per WhatsApp senden</button>
+  <button data-a="datei" id="shareDatei" class="hide"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Plan-Datei teilen (Bild/PDF)</button>
   <button data-a="copy"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Link kopieren</button>
 </div>
 
@@ -313,6 +327,7 @@ const CONFIG = {
   MAT_URL:  "https://hook.eu2.make.com/9xmi0l3c0gxomg261wqvc9mr1njt1zja",   // Make 9914877: Materialliste aus dem PV-Konfigurator (liste / ersetzen)
   MAT_KEY:  "mlk7syrink",
   KATALOG_URL: "https://hook.eu2.make.com/4jc0nue3i98jesk3xvh6gl1xlscqw7gv",   // PV-Katalog (Make 9800213) – Modulmaße für den Montageplan
+  APP_URL:  "https://iliasp572-hue.github.io/baustellen-app/Baustellen-App.html",   // EINZIGE App-Quelle (Make-Links leiten hierher)
   CODE_ADMIN: "7894",   // voller Zugriff
   CODE_MIT:   "1234"    // nur freigegebene Kunden
 };
@@ -342,6 +357,28 @@ function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;",
 function toast(t,bad){ const el=$("#toast"); el.textContent=t; el.className="toast show"+(bad?" bad":""); clearTimeout(el._t); el._t=setTimeout(()=>el.className="toast",2200); }
 function beacon(u){ const f=document.createElement("iframe"); f.style.cssText="display:none"; f.src=u; document.body.appendChild(f); setTimeout(()=>{if(f.parentNode)f.parentNode.removeChild(f);},8000); }
 function mapsUrl(addr){ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(addr); }
+const pad2=n=>String(n).padStart(2,"0");
+/* Termin aus Airtable (JJJJ-MM-TT oder ISO mit Uhrzeit) → „Mi, 07.10.2026 · 07:30 Uhr“ */
+function terminText(d,uhr){
+  const s=String(d||""), m=s.match(/^(\d{4})-(\d{2})-(\d{2})(T\d{2}:\d{2})?/);
+  if(!m) return s;
+  const t=m[4]?new Date(s):new Date(+m[1],+m[2]-1,+m[3]);
+  if(isNaN(t)) return s;
+  if(!uhr&&m[4]) uhr=pad2(t.getHours())+":"+pad2(t.getMinutes());
+  return ["So","Mo","Di","Mi","Do","Fr","Sa"][t.getDay()]+", "+pad2(t.getDate())+"."+pad2(t.getMonth()+1)+"."+t.getFullYear()+(uhr?" · "+uhr+" Uhr":"");
+}
+/* Link auf die Plan-Ansicht (Belegungsplan-Original + Montageplan) – immer die GitHub-Version */
+function planViewUrl(c,uhr){ return CONFIG.APP_URL+"?plan="+encodeURIComponent(c.id)+(uhr?"&uhr="+encodeURIComponent(uhr):""); }
+/* Belegungsplan-Dateien (Original-PDF/Bild) mit Vorschau + Öffnen */
+function planFilesHtml(c){
+  const fileIc='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+  return '<div class="plan-files">'+(c.plans||[]).map(p=>{
+    const pdf=/pdf/i.test(p.type)||/\.pdf$/i.test(p.name);
+    const thumb=p.thumb?'<img src="'+esc(p.thumb)+'" alt="">':fileIc;
+    return '<div class="plan-file"><a class="thumb" href="'+esc(p.url||"#")+'" target="_blank" rel="noopener">'+thumb+'</a><div class="meta"><div class="n">'+esc(p.name)+'</div><div class="s">'+(pdf?'Original-PDF':'Bild')+' · Belegungsplan</div></div>'
+      +(p.url?'<a class="btn" href="'+esc(p.url)+'" target="_blank" rel="noopener">'+(pdf?'PDF öffnen':'Öffnen')+'</a>':'')+'</div>';
+  }).join("")+'</div>';
+}
 
 let state={ access:null, role:"mitarbeiter", openId:null, customers:[], search:"", colSearch:{} };
 function matchesQuery(c,q){ q=(q||"").trim().toLowerCase(); if(!q) return true; return (c.name||"").toLowerCase().includes(q) || (c.address||"").toLowerCase().includes(q); }
@@ -354,9 +391,11 @@ function buildCustomers(sites,materials){
       return ids.indexOf(s.id)>=0;
     }).map(m=>({ recId:m.id, name:fv(m,F.mArtikel,""), benoetigt:nz(fv(m,F.mBen,"")), outbound:nz(fv(m,F.mOut,"")), inbound:nz(fv(m,F.mIn,"")), gepackt:!!fv(m,F.mGepackt,false) }));
     const bp=fv(s,F.sitePlan,[]);
-    const plan=bp.length?{ name:bp[0].filename||"Belegungsplan", url:bp[0].url||null }:null;
+    const plans=(Array.isArray(bp)?bp:[]).map(a=>({ name:a.filename||"Belegungsplan", url:a.url||null, type:a.type||"",
+      thumb:(a.thumbnails&&a.thumbnails.large&&a.thumbnails.large.url)||(/^image\//.test(a.type||"")?a.url:null) }));
+    const plan=plans.length?plans[0]:null;
     let st=fv(s,F.siteStatus,""); if(!KNOWN.has(st)) st="";
-    return { id:s.id, name:fv(s,F.siteName,"(ohne Name)"), address:fv(s,F.siteAddr,""), date:fv(s,F.siteDate,""), status:st, crm:!!fv(s,F.siteDeal,""), released:!!fv(s,F.siteFrei,false), fotoOk:!!fv(s,F.siteFoto,false), plan, materials:mats };
+    return { id:s.id, name:fv(s,F.siteName,"(ohne Name)"), address:fv(s,F.siteAddr,""), date:fv(s,F.siteDate,""), status:st, crm:!!fv(s,F.siteDeal,""), released:!!fv(s,F.siteFrei,false), fotoOk:!!fv(s,F.siteFoto,false), plan, plans, materials:mats };
   });
 }
 async function fetchAll(){
@@ -510,7 +549,7 @@ function renderEmployee(){
 }
 
 /* ===== Detail ===== */
-function openDetail(id){ state.openId=id; $("#dashboard").classList.add("hide"); $("#detail").style.display="block"; renderDetail(); window.scrollTo(0,0); }
+function openDetail(id){ state.openId=id; state.mpFor=null; $("#dashboard").classList.add("hide"); $("#detail").style.display="block"; renderDetail(); window.scrollTo(0,0); }
 function renderDetail(){
   const c=state.customers.find(x=>x.id===state.openId); if(!c) return;
   const admin=state.access==="admin";
@@ -518,14 +557,15 @@ function renderDetail(){
   const s=stats(c); const pct=s.rel?Math.round(s.packed/s.rel*100):0;
 
   let planHtml;
-  if(c.plan){
-    const thumb=c.plan.url?'<img src="'+c.plan.url+'" alt="">':'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
-    planHtml='<div class="plan-file"><div class="thumb">'+thumb+'</div><div class="meta"><div class="n">'+esc(c.plan.name)+'</div><div class="s">Belegungsplan · für die Baustelle</div></div></div>'
-      +'<div class="plan-actions"><a class="btn" href="'+CONFIG.PLAN_URL+"?b="+encodeURIComponent(c.id)+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Öffnen</a>'
-      +'<button class="btn green" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Teilen</button></div>';
+  if(c.plans&&c.plans.length){
+    planHtml=planFilesHtml(c);
   } else {
     planHtml='<div class="drop"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div style="margin-top:8px">Noch kein Belegungsplan.<br><span style="font-size:12.5px">'+(admin?'Über den blauen Airtable-Link oben hochladen (Feld „Belegungsplan").':'Frag im Büro nach dem Belegungsplan.')+'</span></div></div>';
   }
+  /* Teilen (WhatsApp: Plan-Link, Termin mit Uhrzeit, Google-Maps-Link) – für Büro UND Mitarbeiter */
+  planHtml+='<div class="plan-actions"><button class="btn green" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Teilen (WhatsApp)</button></div>';
+  /* Montageplan (KI) direkt im Bereich „Belegungsplan“ */
+  planHtml+='<div class="mp-in"><div class="mp-kopf"><h4>📐 Montageplan (KI) <span style="font-weight:400;font-size:13px;color:var(--muted)">Schienen, Verbinder, Zuschnitte, Dachhaken je Dachfläche</span></h4><button class="btn" id="mpBtn" type="button" title="Montageplan neu laden">↻ Neu laden</button></div><div id="mpBody"></div></div>';
 
   const simple=!isBuero;
   let rows,theadHtml;
@@ -576,9 +616,10 @@ function renderDetail(){
     ? '<a href="'+mapsUrl(c.address)+'" target="_blank" rel="noopener" title="In Google Maps öffnen">📍 '+esc(c.address)+'</a>'
     : '';
   const atHtml=admin?'<a class="at-link" href="https://airtable.com/appRZcrBEMQDbVHfA/tblJWsBxa3DbaGXOS/'+c.id+'" target="_blank" rel="noopener">&#128247; Bilder &amp; Karte in Airtable &ouml;ffnen</a>':'';
+  const altMp=state.mpFor===c.id?$("#mpBody"):null;   /* geladenen Montageplan beim Neuzeichnen behalten (kein neuer Make-Aufruf) */
   $("#detailBody").innerHTML=
-    '<div class="d-head"><div class="row1"><div><h2>'+esc(c.name)+'</h2><div class="addr">'+addrHtml+(c.date?(addrHtml?' · ':'')+'Termin: '+esc(c.date):'')+'</div></div>'+statusCtrl+'</div>'+atHtml+freigabeCtrl+'</div>'
-    +'<div class="grid2"><div class="box"><h4>Belegungsplan</h4>'+planHtml+'</div>'
+    '<div class="d-head"><div class="row1"><div><h2>'+esc(c.name)+'</h2><div class="addr">'+addrHtml+(c.date?(addrHtml?' · ':'')+'Termin: '+esc(terminText(c.date)):'')+'</div></div>'+statusCtrl+'</div>'+atHtml+freigabeCtrl+'</div>'
+    +'<div class="grid2"><div class="box plan-box"><h4>Belegungsplan</h4>'+planHtml+'</div>'
     +'<div class="box"><h4>Übersicht</h4><div class="tiles">'
     +'<div class="tile"><div class="k">Gepackt</div><div class="v">'+s.packed+'<small>/'+s.rel+'</small></div><div class="prog"><i style="width:'+pct+'%"></i></div></div>'
     +'<div class="tile '+(s.dev>0?"bad":"good")+'"><div class="k">Abweichungen (rot)</div><div class="v">'+s.dev+'</div><div style="font-size:12px;color:var(--muted);margin-top:8px">'+(s.dev>0?"Bitte prüfen / nachbestellen":"Alles im grünen Bereich")+'</div></div>'
@@ -592,8 +633,8 @@ function renderDetail(){
       ? '<div class="hint"><b>Packen:</b> Stückzahl packen, bei <b>Raus</b> eintragen, was mitgeht (grauer Vorschlag = mit Reserve), abhaken. Wenn alles gepackt ist: Foto machen und den grünen Knopf drücken. <b>Nach der Baustelle:</b> Reste zählen und bei <b>Zurück</b> eintragen.</div>'
       : '<div class="hint"><b>Div. = Outbound − Inbound</b> (was tatsächlich verbraucht wurde). Ist der Wert gleich <b>Benötigt</b> → <span style="color:var(--accent);font-weight:700">grün</span>, sonst → <span style="color:var(--danger);font-weight:700">rot</span>. '
     +'Als Büro füllst du <b>Benötigt</b> aus und setzt den Status.</div>')+'</div>'
-    +'<div class="mp-sec"><div class="mp-kopf"><h4>📐 Montageplan <span style="font-weight:400;font-size:13px;color:var(--muted)">Schienen, Verbinder, Zuschnitte, Dachhaken je Dachfläche</span></h4><button class="btn primary" id="mpBtn" type="button">Montageplan anzeigen</button></div><div id="mpBody"></div></div>'
     +fotoBtn;
+  if(altMp) $("#mpBody").replaceWith(altMp); else { state.mpFor=c.id; mpOeffnen(c); }
 
   const ss=$("#statusSel"); if(ss) ss.onchange=e=>{ c.status=e.target.value; saveStatus(c); toast("Status gespeichert"); };
   const fr=$("#frToggle"); if(fr) fr.onclick=()=>toggleFreigabe(c);
@@ -1133,25 +1174,49 @@ function toggleFreigabe(c){
 }
 
 /* ===== Teilen ===== */
+/* WhatsApp-Text: Baustelle, Termin MIT Uhrzeit, Adresse + Google-Maps-Link, Link auf Belegungs- & Montageplan.
+   Die Uhrzeit steht nicht in Airtable („Termin“ ist nur ein Datum) → wird beim Teilen eingetragen und je Baustelle gemerkt. */
 let shareCtx=null;
-function shareText(c){
-  const link=CONFIG.PLAN_URL+"?b="+encodeURIComponent(c.id);
-  let txt="Belegungsplan für "+c.name;
+function uhrMerken(c,u){ try{ localStorage.setItem("bz_uhr_"+c.id,u); if(u) localStorage.setItem("bz_uhr_last",u); }catch(e){} }
+function uhrLesen(c){ try{ return localStorage.getItem("bz_uhr_"+c.id)||localStorage.getItem("bz_uhr_last")||""; }catch(e){ return ""; } }
+function shareText(c,uhr){
+  let txt="🏗️ Baustelle: "+c.name;
+  if(c.date||uhr) txt+="\n📅 Termin: "+(c.date?terminText(c.date,uhr):"Uhrzeit "+uhr+" Uhr");
   if(c.address){
     txt+="\n📍 Adresse: "+c.address;
-    txt+="\n🗺️ Navigation: "+mapsUrl(c.address);
+    txt+="\n🗺️ Google Maps: "+mapsUrl(c.address);
   }
-  if(c.date) txt+="\n📅 Termin: "+c.date;
-  txt+="\n\n📄 Belegungsplan: "+link;
+  txt+="\n\n📐 Belegungsplan & Montageplan: "+planViewUrl(c,uhr);
   return txt;
 }
-function openShare(e,c){ shareCtx=c; const p=$("#sharePop"); const r=e.currentTarget.getBoundingClientRect(); p.style.display="block"; p.style.left=Math.min(r.left,window.innerWidth-210)+"px"; p.style.top=(r.bottom+window.scrollY+6)+"px"; }
+/* Original-Plan als Datei (Bild/PDF) – nur wo das Handy Dateien teilen kann */
+async function planDateien(c){
+  const out=[];
+  for(const p of (c.plans||[])){ if(!p.url) continue;
+    const b=await fetch(p.url).then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.blob(); });
+    out.push(new File([b],p.name||"Belegungsplan",{type:b.type||p.type||"application/octet-stream"})); }
+  return out;
+}
+const kannDateiTeilen=()=>!!(navigator.canShare&&navigator.share&&window.File&&navigator.canShare({files:[new File(["x"],"x.pdf",{type:"application/pdf"})]}));
+function openShare(e,c){
+  shareCtx=c; const p=$("#sharePop"); const r=e.currentTarget.getBoundingClientRect();
+  $("#shareUhr").value=uhrLesen(c);
+  $("#shareDatei").classList.toggle("hide",!(c.plans&&c.plans.length&&kannDateiTeilen()));
+  p.style.display="block";
+  const h=p.offsetHeight, w=p.offsetWidth;
+  p.style.left=Math.max(8,Math.min(r.left,window.innerWidth-w-8))+"px";
+  p.style.top=Math.max(8,(r.bottom+6+h>window.innerHeight)?r.top-h-6:r.bottom+6)+"px";   /* position:fixed → ohne scrollY */
+}
 document.addEventListener("click",e=>{ const p=$("#sharePop"); if(p.style.display==="block"&&!p.contains(e.target)&&!e.target.closest("#shareBtn"))p.style.display="none"; });
 $("#sharePop").querySelectorAll("button").forEach(b=>{
-  b.onclick=()=>{ const c=shareCtx; const txt=shareText(c);
-    if(b.dataset.a==="wa"){ window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank"); }
-    else { navigator.clipboard&&navigator.clipboard.writeText(txt); toast("Plan + Adresse kopiert"); }
+  b.onclick=async()=>{ const c=shareCtx; if(!c) return; const uhr=$("#shareUhr").value; uhrMerken(c,uhr); const txt=shareText(c,uhr);
     $("#sharePop").style.display="none";
+    if(b.dataset.a==="wa"){ window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank"); }
+    else if(b.dataset.a==="datei"){
+      try{ toast("Plan wird geladen …"); const files=await planDateien(c); await navigator.share({files,text:txt}); }
+      catch(err){ if(err&&err.name==="AbortError") return; toast("Datei-Teilen nicht möglich – Link per WhatsApp senden",true); }
+    }
+    else { navigator.clipboard&&navigator.clipboard.writeText(txt); toast("Text mit Plan-Link, Termin + Maps kopiert"); }
   };
 });
 
@@ -1175,7 +1240,7 @@ function applyAccessUI(){
 
 /* ===== Versions-Check =====
    Bei jeder Änderung APP_VERSION hier UND in version.json erhöhen (Format JJJJMMTTNN). */
-const APP_VERSION = 2026100501;
+const APP_VERSION = 2026100502;
 let verGeprueft = 0;
 function pruefeVersion(){
   if(Date.now()-verGeprueft<60000) return;
@@ -1204,8 +1269,39 @@ function unlock(){
 }
 $("#codeBtn").onclick=unlock;
 $("#codeIn").addEventListener("keydown",e=>{ if(e.key==="Enter") unlock(); });
+
+/* ===== Plan-Ansicht (?plan=<Baustellen-ID>[&uhr=HH:MM]) =====
+   Ziel des WhatsApp-Links und des alten Make-Links „Baustellen App: Plan-Link“ (Make 9505710 leitet hierher weiter).
+   Nur lesen: Termin mit Uhrzeit, Adresse + Navigation, Belegungsplan-Original (PDF/Bild), Montageplan (KI). */
+async function planAnsicht(id){
+  const uhr=(new URLSearchParams(location.search).get("uhr")||"").replace(/[^0-9:]/g,"").slice(0,5);
+  $("#gate").classList.add("hide");
+  const pv=$("#planView"); pv.classList.remove("hide");
+  pv.innerHTML='<div class="center"><div><div class="spin"></div>Plan wird geladen …</div></div>';
+  try{
+    const d=await fetch(CONFIG.GET_URL,{cache:"no-store"}).then(r=>r.json());
+    const s=recs(d.sites).find(x=>x.id===id);
+    if(!s) throw new Error("Baustelle nicht gefunden");
+    const c=buildCustomers([s],[])[0];
+    state.access="plan"; state.customers=[c]; state.openId=c.id;
+    document.title="Plan · "+c.name;
+    pv.innerHTML='<div class="d-head"><h2>'+esc(c.name)+'</h2>'
+      +(c.date||uhr?'<div class="addr">📅 Termin: <b>'+esc(c.date?terminText(c.date,uhr):uhr+" Uhr")+'</b></div>':'')
+      +(c.address?'<div class="addr">📍 '+esc(c.address)+'</div><a class="pv-nav" href="'+mapsUrl(c.address)+'" target="_blank" rel="noopener">🗺️ Navigation starten (Google Maps)</a>':'')
+      +'</div>'
+      +'<div class="box" style="margin-top:14px"><h4>Belegungsplan</h4>'
+      +(c.plans.length?planFilesHtml(c):'<div class="drop">Noch kein Belegungsplan hinterlegt.</div>')
+      +'<div class="mp-in"><div class="mp-kopf"><h4>📐 Montageplan (KI)</h4><button class="btn" id="mpBtn" type="button" title="Montageplan neu laden">↻ Neu laden</button></div><div id="mpBody"></div></div></div>';
+    mpOeffnen(c);
+  }catch(e){
+    pv.innerHTML='<div class="center"><div><div style="font-size:30px">⚠️</div><div style="margin:8px 0 14px">Plan konnte nicht geladen werden ('+esc(e.message)+').</div><a class="btn" href="'+CONFIG.APP_URL+'">Zur Baustellen-App</a></div></div>';
+  }
+}
+
+const PLAN_ID=new URLSearchParams(location.search).get("plan");
 const saved=sessionStorage.getItem("bz_access");
-if(saved==="admin"||saved==="mit") startApp(saved);
+if(PLAN_ID) planAnsicht(PLAN_ID);
+else if(saved==="admin"||saved==="mit") startApp(saved);
 </script>
 </body>
 </html>
