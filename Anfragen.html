@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#101218">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Anfragen">
+<link rel="manifest" href="anfragen.webmanifest">
+<link rel="icon" href="anfragen-icon-192.png">
+<link rel="apple-touch-icon" href="anfragen-icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600&display=swap">
+<title>Anfragen – Syrink</title>
+<style>
+  :root{--bg:#14161d;--panel:#1b1e29;--p2:#222636;--line:#2b3042;--text:#f4f6fb;--muted:#b4bbcc;
+        --gold:#ffb23e;--green:#34d399;--red:#f87171;--blue:#60a5fa}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{min-height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Lexend',Verdana,sans-serif;font-weight:300;font-size:15px;line-height:1.35}
+  b,strong{font-weight:600}
+  button,input,textarea,select{font-family:inherit;font-size:inherit}
+  button{cursor:pointer}
+  .hide{display:none!important}
+  .gold{color:var(--gold)} .green{color:var(--green)} .blue{color:var(--blue)} .red{color:var(--red)}
+
+  /* Zugangscode */
+  .gate{min-height:100dvh;display:grid;place-items:center;padding:24px}
+  .gate-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:28px 24px;width:100%;max-width:360px;text-align:center}
+  .sun{width:44px;height:44px;border-radius:50%;margin:0 auto 14px;background:radial-gradient(circle at 50% 45%,#ffd27a,var(--gold) 62%,#e0851a);box-shadow:0 0 18px rgba(255,178,62,.35)}
+  .gate-card h1{font-size:20px;font-weight:600;margin:0 0 4px;letter-spacing:.04em}
+  .gate-card p{color:var(--muted);font-size:14px;margin:0 0 18px}
+  .code-in{width:100%;text-align:center;font-size:24px;letter-spacing:8px;font-weight:600;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--p2);color:var(--text);margin-bottom:12px}
+  .code-in:focus{outline:none;border-color:var(--gold)}
+  .gate-btn{width:100%;border:0;background:var(--gold);color:#1a1200;padding:14px;border-radius:12px;font-weight:600;font-size:16px}
+  .gate-err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px}
+
+  /* Kopf */
+  header{position:sticky;top:0;z-index:20;background:#101218;border-bottom:1px solid var(--line)}
+  .top{padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+  .top .sun{width:22px;height:22px;margin:0;box-shadow:0 0 12px rgba(255,178,62,.35)}
+  .top .bt{font-size:13px;font-weight:600;letter-spacing:.14em}
+  .top .ttl{font-size:16px;font-weight:600;padding-left:10px;border-left:1px solid var(--line)}
+  .spacer{flex:1}
+  .rfr{background:var(--p2);color:var(--gold);border:1px solid var(--line);border-radius:10px;width:40px;height:40px;font-size:20px;display:grid;place-items:center}
+  .tabs{display:flex;gap:6px;padding:0 14px 10px}
+  .tab{flex:1;position:relative;padding:9px 6px;border-radius:10px;background:#171a23;border:1px solid #232837;color:var(--muted);text-align:center;font-size:14px}
+  .tab.on{background:rgba(255,178,62,.15);border-color:rgba(255,178,62,.6);color:var(--gold);font-weight:400}
+  .bdg{display:inline-block;min-width:20px;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:0 6px;font-size:11px;font-weight:600;line-height:18px}
+  .bdg:empty{display:none}
+
+  /* Liste */
+  main{padding:12px 14px 110px;max-width:640px;margin:0 auto}
+  .info{color:var(--muted);text-align:center;padding:40px 10px;font-size:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .card.done{opacity:.75}
+  .r1{display:flex;align-items:baseline;gap:10px}
+  .name{font-size:17px;font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere}
+  .time{color:var(--muted);font-size:12.5px;white-space:nowrap}
+  .r2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;font-size:13.5px;color:var(--muted)}
+  .chip{background:rgba(96,165,250,.14);color:var(--blue);border-radius:8px;padding:2px 8px;font-size:12px;font-weight:400}
+  .sum{margin-top:8px;font-size:14px;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+  .card.open .sum{display:block;-webkit-line-clamp:unset}
+  .note{margin-top:10px;font-size:13.5px;padding:8px 10px;border-radius:10px;background:var(--p2)}
+  .note a{font-weight:600;text-decoration:underline}
+  .btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+  .btns button{border:0;border-radius:12px;min-height:58px;padding:8px 4px;font-size:13.5px;font-weight:600;line-height:1.2;color:#101218;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+  .btns .ic{font-size:20px}
+  .b-call{background:var(--green)} .b-mail{background:var(--gold)} .b-term{background:var(--blue)}
+  .btns button:disabled{opacity:.45}
+  .btns a{text-decoration:none}
+  .card.done .btns{grid-template-columns:1fr}
+  @media(max-width:360px){.btns{grid-template-columns:1fr}.btns button{flex-direction:row;min-height:50px}}
+
+  /* Plus */
+  .fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:62px;height:62px;border-radius:50%;border:0;background:var(--gold);color:#1a1200;font-size:36px;line-height:1;font-weight:400;box-shadow:0 6px 20px rgba(0,0,0,.45);z-index:15}
+
+  /* Sheet (Termin / Neu) */
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 0 0;width:100%;max-width:640px;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:92dvh;overflow:auto}
+  .sheet h2{margin:0 0 12px;font-size:18px;font-weight:600}
+  .sheet label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  .sheet input,.sheet textarea{width:100%;background:var(--p2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:16px;font-weight:300}
+  .sheet input:focus,.sheet textarea:focus{outline:none;border-color:var(--gold)}
+  .sheet textarea{min-height:80px;resize:vertical}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;background:#171a23;border:1px solid #232837;color:var(--muted);border-radius:10px;padding:10px}
+  .seg button.on{background:rgba(255,178,62,.15);border-color:rgba(255,178,62,.6);color:var(--gold)}
+  .row{display:flex;gap:8px;margin-top:16px}
+  .row button{flex:1;border:0;border-radius:12px;padding:14px;font-weight:600;font-size:15px}
+  .b-ok{background:var(--gold);color:#1a1200} .b-ok.blue{background:var(--blue);color:#101218}
+  .b-x{background:var(--p2);color:var(--text);border:1px solid var(--line)!important}
+  .row button:disabled{opacity:.5}
+
+  .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:#2a2f40;color:var(--text);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.2s;z-index:40;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+  .toast.bad{background:#5b1f1f}
+</style>
+</head>
+<body>
+
+<!-- Zugangscode -->
+<div id="gate" class="gate">
+  <div class="gate-card">
+    <div class="sun"></div>
+    <h1>SYRINK · Anfragen</h1>
+    <p>Bitte <b class="gold">Zugangscode</b> eingeben</p>
+    <input id="codeIn" class="code-in" type="text" inputmode="numeric" maxlength="24" placeholder="••••" autocomplete="off" autocapitalize="off">
+    <button class="gate-btn" id="codeBtn">Anmelden</button>
+    <div class="gate-err" id="codeErr"></div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" class="hide">
+  <header>
+    <div class="top">
+      <div class="sun"></div><div class="bt">SYRINK</div><div class="ttl">Anfragen</div>
+      <div class="spacer"></div>
+      <button class="rfr" id="rfr" title="Aktualisieren">&#8635;</button>
+    </div>
+    <div class="tabs">
+      <button class="tab on" data-t="offen">Offen<span class="bdg" id="nOffen"></span></button>
+      <button class="tab" data-t="erledigt">Erledigt<span class="bdg" id="nErl" style="background:var(--green);color:#101218"></span></button>
+    </div>
+  </header>
+  <main id="list"><div class="info">Lade Anfragen …</div></main>
+  <button class="fab" id="fab" title="Anfrage anlegen">+</button>
+</div>
+
+<!-- Termin-Sheet -->
+<div class="ov hide" id="ovTermin">
+  <div class="sheet">
+    <h2>📅 Termin mit <span class="blue" id="tName"></span></h2>
+    <label>Datum</label><input type="date" id="tDate">
+    <label>Uhrzeit</label><input type="time" id="tTime" step="900">
+    <div class="row"><button class="b-x" data-x>Abbrechen</button><button class="b-ok blue" id="tOk">Termin speichern</button></div>
+  </div>
+</div>
+
+<!-- Neu-Sheet -->
+<div class="ov hide" id="ovNeu">
+  <div class="sheet">
+    <h2>➕ Anfrage anlegen</h2>
+    <label>Quelle</label>
+    <div class="seg" id="nQuelle"><button class="on" data-q="Anruf">📞 Anruf</button><button data-q="WhatsApp">💬 WhatsApp</button></div>
+    <label>Name *</label><input id="nName" autocomplete="off">
+    <label>Telefon</label><input id="nTel" type="tel" autocomplete="off">
+    <label>E-Mail</label><input id="nMail" type="email" autocomplete="off" inputmode="email">
+    <label>Ort</label><input id="nOrt" autocomplete="off">
+    <label>Notiz</label><textarea id="nNotiz" placeholder="Worum geht es? (z. B. BKW, Dach-PV, Speicher)"></textarea>
+    <div class="row"><button class="b-x" data-x>Abbrechen</button><button class="b-ok" id="nOk">Anlegen</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   KONFIG – Make-Szenario "Anfragen-Anna: App-Schnittstelle"
+   ---------------------------------------------------------------------
+   Eine URL für alles (GET mit Query-Parametern):
+     k=<Login-Code>      wird nur auf dem Handy gespeichert, Prüfung macht Make
+     aktion=liste        → {"ok":1,"liste":[{key,name,ort,quelle,status,eingang,
+                            termin,telefon,mail,versuche,zusammenfassung}]}
+                           status: "Neu" | "Nicht erreicht" | "Termin vereinbart"
+                           eingang/termin: "JJJJ-MM-TT HH:mm"
+     aktion=neu          &name&telefon&mail&ort&text&quelle
+                         → {"ok":1,"key":…}  oder  {"ok":1,"dublette":1,"key":…}
+     aktion=nicht_erreicht &key=<Eintrags-ID>
+                         → {"ok":1,"mail":1,"versuche":n}
+                           {"ok":1,"mail":0,"hinweis":"…"}  (Kunde ohne Mail)
+     aktion=termin       &key=<Eintrags-ID>&datum=JJJJ-MM-TT&zeit=HH:MM&dauer=60
+                         → {"ok":1,"termin":"JJJJ-MM-TT HH:mm","link":…}
+   Falscher Code: Make antwortet mit HTTP 401 oder nur "Accepted" (keine
+   Route passt) → die App löscht den Code und zeigt wieder den Login.
+   ===================================================================== */
+const HOOK_URL = "https://hook.eu2.make.com/x281cp9icjlxlyg2r5g8epnotcpt5f1m";
+const KEY_LS="anfragen_key";                      // Login-Code, nur lokal auf dem Handy
+let KEY=""; try{ KEY=localStorage.getItem(KEY_LS)||""; }catch(e){}
+
+/* ===== Helfer ===== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function toast(t,bad,long){const el=$("#toast");el.textContent=t;el.className="toast show"+(bad?" bad":"");clearTimeout(el._t);el._t=setTimeout(()=>el.className="toast",long?5000:2400);}
+const WD=["So","Mo","Di","Mi","Do","Fr","Sa"];
+function p2(n){return (n<10?"0":"")+n;}
+function pd(v){ if(!v) return null; if(v instanceof Date) return v; const d=new Date(String(v).trim().replace(" ","T")); return isNaN(d)?null:d; }
+function fmt(v){ // "heute 14:03" / "gestern 09:12" / "Fr 10.10., 09:12"
+  const d=pd(v); if(!d) return String(v||"");
+  const t=p2(d.getHours())+":"+p2(d.getMinutes());
+  const now=new Date(), a=new Date(now.getFullYear(),now.getMonth(),now.getDate()), b=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  const diff=Math.round((a-b)/86400000);
+  if(diff===0) return "heute "+t; if(diff===1) return "gestern "+t;
+  return WD[d.getDay()]+" "+p2(d.getDate())+"."+p2(d.getMonth()+1)+"., "+t;
+}
+function fmtTermin(v){ const d=pd(v); if(!d) return String(v||"");
+  return WD[d.getDay()]+" "+p2(d.getDate())+"."+p2(d.getMonth()+1)+"."+d.getFullYear()+", "+p2(d.getHours())+":"+p2(d.getMinutes())+" Uhr"; }
+function ts(v){const d=pd(v);return d?d.getTime():0;}
+function qs(o){return Object.keys(o).filter(k=>o[k]!==undefined&&o[k]!==null&&o[k]!=="").map(k=>k+"="+encodeURIComponent(o[k])).join("&");}
+function hasMail(m){ return /@/.test(String(m||"")); }
+function telClean(t){ return String(t||"").replace(/[^\d+]/g,""); }
+function waUrl(t){ let n=telClean(t); if(n.startsWith("00")) n=n.slice(2); else if(n.startsWith("0")) n="49"+n.slice(1); return "https://wa.me/"+n.replace("+",""); }
+
+class AuthError extends Error{}
+async function call(aktion,params){ // GET, Antwort = JSON mit ok:1
+  const c=new AbortController(); const t=setTimeout(()=>c.abort(),25000);
+  try{
+    const r=await fetch(HOOK_URL+"?"+qs(Object.assign({k:KEY,aktion,t:Date.now()},params||{})),{cache:"no-store",signal:c.signal});
+    const txt=await r.text();
+    if(r.status===401||r.status===403) throw new AuthError("Falscher Code");
+    let j=null; try{ j=JSON.parse(txt); }catch(e){}
+    if(!j||typeof j!=="object"){ // keine Route hat gepasst (z. B. "Accepted") → bei "liste" = falscher Code
+      if(aktion==="liste"||/falscher code|unauthori[sz]ed/i.test(txt)) throw new AuthError("Falscher Code");
+      throw new Error("Make hat nichts gespeichert ("+txt.slice(0,40)+")");
+    }
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    if(j.ok!==1&&j.ok!==true&&j.ok!=="1") throw new Error(j.fehler||j.error||"Make meldet Fehler");
+    return j;
+  } finally{ clearTimeout(t); }
+}
+function logout(msg){ KEY=""; try{localStorage.removeItem(KEY_LS);}catch(e){} DATA=[];
+  document.querySelectorAll(".ov").forEach(o=>o.classList.add("hide"));
+  $("#app").classList.add("hide"); $("#gate").classList.remove("hide"); $("#codeIn").value=""; $("#codeErr").textContent=msg||"Falscher Code."; }
+function fehler(e,was){ if(e instanceof AuthError){ logout(); return; } toast(was+": "+e.message,true,true); }
+
+/* ===== Daten ===== */
+let DATA=[], TAB="offen";
+const LS="anfragen_lokal";              // lokal: wann die Mail gesendet wurde (Make speichert keine Uhrzeit)
+let LOKAL={}; try{LOKAL=JSON.parse(localStorage.getItem(LS)||"{}");}catch(e){}
+function saveLokal(){try{localStorage.setItem(LS,JSON.stringify(LOKAL));}catch(e){}}
+
+function norm(r){ // Make-Datensatz → einheitliches Objekt
+  const f=r.data||r; const g=(...k)=>{for(const x of k){ if(f[x]!==undefined&&f[x]!==null&&f[x]!=="") return f[x]; } return "";};
+  const st=String(g("status")).toLowerCase();
+  const o={ id:String(r.key||g("key","id")), name:g("name"), ort:g("ort"), quelle:g("quelle"), zusammenfassung:g("zusammenfassung","text"),
+    telefon:g("telefon"), mail:g("mail"), eingang:g("eingang"), termin:g("termin"), versuche:Number(g("versuche"))||0,
+    status: st.startsWith("termin")?"erledigt":(st.startsWith("nicht")?"mail":"neu") };
+  const l=LOKAL[o.id]; if(l){ o.mail_gesendet=l.when; o.keineMail=!!l.keineMail; }
+  if(!o.keineMail && o.status==="mail" && !hasMail(o.mail)) o.keineMail=true;
+  return o;
+}
+async function load(){
+  $("#rfr").style.opacity=.5;
+  try{
+    const j=await call("liste");
+    const arr=Array.isArray(j)?j:(j.liste||j.records||[]);
+    DATA=arr.map(norm).filter(x=>x.id).sort((a,b)=>ts(b.eingang)-ts(a.eingang));
+    const ids=new Set(DATA.map(x=>x.id)); Object.keys(LOKAL).forEach(k=>{ if(!ids.has(k)) delete LOKAL[k]; }); saveLokal();
+  }catch(e){ $("#rfr").style.opacity=1; if(e instanceof AuthError){ logout(); return false; }
+    toast("Laden fehlgeschlagen: "+e.message,true,true); if(!DATA.length){ $("#list").innerHTML='<div class="info">Keine Verbindung zu Make.<br>Bitte <b class="gold">Aktualisieren</b> tippen.</div>'; return false; } }
+  $("#rfr").style.opacity=1; render(); return true;
+}
+
+/* ===== Anzeige ===== */
+const HINWEIS="Keine Mail-Adresse – bitte per WhatsApp/SMS";
+function noteMail(o){
+  const v=o.versuche>1?' · <b>'+o.versuche+'. Versuch</b>':'';
+  if(o.keineMail){
+    const tel=telClean(o.telefon);
+    const wa=tel?'<a class="blue" href="'+esc(waUrl(o.telefon))+'" target="_blank" rel="noopener">WhatsApp</a>':'WhatsApp';
+    const sms=tel?'<a class="blue" href="sms:'+esc(tel)+'">SMS</a>':'SMS';
+    return '<div class="note">⚠️ <b class="red">Keine Mail-Adresse</b> – bitte per '+wa+'/'+sms+v+'</div>';
+  }
+  return '<div class="note">✉️ <b class="gold">Mail gesendet</b>'+(o.mail_gesendet?' am '+esc(fmt(o.mail_gesendet)):'')+v+'</div>';
+}
+function render(){
+  const offen=DATA.filter(x=>x.status!=="erledigt"), erl=DATA.filter(x=>x.status==="erledigt");
+  $("#nOffen").textContent=offen.length||""; $("#nErl").textContent=erl.length||"";
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.t===TAB));
+  const rows=TAB==="offen"?offen:erl;
+  if(!rows.length){ $("#list").innerHTML='<div class="info">'+(TAB==="offen"?"Keine offenen Anfragen 🎉":"Noch nichts erledigt.")+'</div>'; return; }
+  $("#list").innerHTML=rows.map(o=>{
+    const done=o.status==="erledigt"; const tel=telClean(o.telefon);
+    return '<div class="card'+(done?" done":"")+'" data-id="'+esc(o.id)+'">'
+      +'<div class="r1"><div class="name">'+esc(o.name||"Ohne Name")+'</div><div class="time">'+esc(fmt(o.eingang))+'</div></div>'
+      +'<div class="r2">'+(o.ort?'<span>📍 '+esc(o.ort)+'</span>':'')+(o.quelle?'<span class="chip">'+esc(o.quelle)+'</span>':'')+(o.telefon?'<span>'+esc(o.telefon)+'</span>':'')+'</div>'
+      +(o.zusammenfassung?'<div class="sum">'+esc(o.zusammenfassung)+'</div>':'')
+      +(done?'<div class="note">📅 <b class="blue">Termin:</b> '+esc(fmtTermin(o.termin))+'</div>':(o.status==="mail"?noteMail(o):''))
+      +'<div class="btns">'
+      +(tel?'<a href="tel:'+esc(tel)+'"><button class="b-call" style="width:100%"><span class="ic">📞</span>Anrufen</button></a>':'<button class="b-call" disabled><span class="ic">📞</span>Keine Nr.</button>')
+      +(done?'':'<button class="b-mail" data-a="mail"><span class="ic">✉️</span>Nicht erreicht</button><button class="b-term" data-a="termin"><span class="ic">📅</span>Termin vereinbart</button>')
+      +'</div></div>';
+  }).join("");
+}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{TAB=b.dataset.t;render();});
+$("#rfr").onclick=load;
+$("#list").addEventListener("click",e=>{
+  if(e.target.closest("a")) return;
+  const card=e.target.closest(".card"); if(!card) return;
+  const o=DATA.find(x=>x.id===card.dataset.id); if(!o) return;
+  const b=e.target.closest("button[data-a]");
+  if(!b){ if(e.target.closest(".sum")) card.classList.toggle("open"); return; }
+  if(b.dataset.a==="mail") nichtErreicht(o,b);
+  if(b.dataset.a==="termin") openTermin(o);
+});
+
+/* ===== Aktionen ===== */
+async function nichtErreicht(o,btn){
+  if(o.status==="mail" && !confirm(o.keineMail?"Nochmal als „nicht erreicht“ zählen?":"Mail wurde schon gesendet. Nochmal senden?")) return;
+  btn.disabled=true;
+  try{ const j=await call("nicht_erreicht",{key:o.id});
+       o.status="mail"; if(j.versuche) o.versuche=Number(j.versuche)||o.versuche+1; else o.versuche++;
+       if(Number(j.mail)===1){ o.keineMail=false; o.mail_gesendet=new Date().toISOString(); LOKAL[o.id]={when:o.mail_gesendet}; toast("✉️ Mail an "+(o.name||"Kunde")+" gesendet"); }
+       else { o.keineMail=true; LOKAL[o.id]={keineMail:true}; toast("⚠️ "+HINWEIS,true,true); }
+       saveLokal(); render(); }
+  catch(e){ fehler(e,"Senden fehlgeschlagen"); btn.disabled=false; }
+}
+let T=null;
+function openTermin(o){
+  T=o; $("#tName").textContent=o.name||"Kunde";
+  const d=new Date(); d.setDate(d.getDate()+1);
+  $("#tDate").value=d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); $("#tTime").value="10:00";
+  $("#ovTermin").classList.remove("hide");
+}
+$("#tOk").onclick=async()=>{
+  const dv=$("#tDate").value, tv=$("#tTime").value; if(!dv||!tv){toast("Bitte Datum und Uhrzeit wählen",true);return;}
+  const btn=$("#tOk"); btn.disabled=true;
+  try{ const j=await call("termin",{key:T.id,datum:dv,zeit:tv,dauer:60});
+       T.status="erledigt"; T.termin=j.termin||(dv+" "+tv);
+       $("#ovTermin").classList.add("hide"); toast("📅 Termin gespeichert: "+fmtTermin(T.termin)); render(); }
+  catch(e){ fehler(e,"Speichern fehlgeschlagen"); }
+  btn.disabled=false;
+};
+let QUELLE="Anruf";
+$("#nQuelle").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;QUELLE=b.dataset.q;document.querySelectorAll("#nQuelle button").forEach(x=>x.classList.toggle("on",x===b));});
+$("#fab").onclick=()=>{ ["nName","nTel","nMail","nOrt","nNotiz"].forEach(i=>$("#"+i).value=""); $("#ovNeu").classList.remove("hide"); setTimeout(()=>$("#nName").focus(),50); };
+$("#nOk").onclick=async()=>{
+  const name=$("#nName").value.trim(); if(!name){toast("Name fehlt",true);$("#nName").focus();return;}
+  const p={name,telefon:$("#nTel").value.trim(),mail:$("#nMail").value.trim(),ort:$("#nOrt").value.trim(),text:$("#nNotiz").value.trim(),quelle:QUELLE};
+  const btn=$("#nOk"); btn.disabled=true;
+  try{ const j=await call("neu",p);
+       $("#ovNeu").classList.add("hide"); TAB="offen";
+       if(Number(j.dublette)===1){ toast("Schon vorhanden (letzte 30 Tage) – nicht doppelt angelegt",true,true); }
+       else { toast("Anfrage angelegt"); DATA.unshift({id:String(j.key||("lokal-"+Date.now())),name,ort:p.ort,quelle:QUELLE,zusammenfassung:p.text,telefon:p.telefon,mail:p.mail,eingang:new Date().toISOString(),status:"neu",versuche:0}); render(); }
+       load(); }
+  catch(e){ fehler(e,"Anlegen fehlgeschlagen"); }
+  btn.disabled=false;
+};
+document.querySelectorAll(".ov").forEach(ov=>{ ov.addEventListener("click",e=>{ if(e.target===ov||e.target.closest("[data-x]")) ov.classList.add("hide"); }); });
+
+/* ===== Login (Prüfung macht Make) ===== */
+function start(){ $("#gate").classList.add("hide"); $("#app").classList.remove("hide"); $("#list").innerHTML='<div class="info">Lade Anfragen …</div>'; load(); }
+async function unlock(){
+  const v=$("#codeIn").value.trim(); if(!v){ $("#codeErr").textContent="Bitte Code eingeben."; return; }
+  const btn=$("#codeBtn"); btn.disabled=true; $("#codeErr").textContent="Prüfe …";
+  KEY=v;
+  try{ await call("liste"); }                               // Make prüft den Code
+  catch(e){ KEY=""; $("#codeErr").textContent=(e instanceof AuthError)?"Falscher Code.":"Keine Verbindung: "+e.message; $("#codeIn").value=""; btn.disabled=false; return; }
+  try{ localStorage.setItem(KEY_LS,KEY); }catch(e){}
+  $("#codeErr").textContent=""; btn.disabled=false; start();
+}
+$("#codeBtn").onclick=unlock; $("#codeIn").addEventListener("keydown",e=>{ if(e.key==="Enter") unlock(); });
+if(KEY) start();
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden && KEY && !$("#app").classList.contains("hide")) load(); });
+</script>
+</body>
+</html>
