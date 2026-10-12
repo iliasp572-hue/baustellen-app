@@ -162,19 +162,18 @@
    ---------------------------------------------------------------------
    Eine URL für alles (GET mit Query-Parametern):
      k=<Login-Code>      wird nur auf dem Handy gespeichert, Prüfung macht Make
-     aktion=liste        → {"ok":1,"liste":[{key,name,ort,quelle,status,eingang,
-                            termin,telefon,mail,versuche,zusammenfassung}]}
-                           status: "Neu" | "Nicht erreicht" | "Termin vereinbart"
-                           eingang/termin: "JJJJ-MM-TT HH:mm"
+                         (falscher Code → HTTP 401 → App zeigt wieder den Login)
+     aktion=liste        → JSON-Array [ {id,name,ort,quelle,zusammenfassung,telefon,
+                            mail,eingang,status,mail_gesendet,termin}, … ]
+                           status: "neu" | "mail" | "erledigt", leere Felder = null,
+                           Datumsangaben "JJJJ-MM-TT HH:MM", [] = keine Anfragen
      aktion=neu          &name&telefon&mail&ort&text&quelle
                          → {"ok":1,"key":…}  oder  {"ok":1,"dublette":1,"key":…}
      aktion=nicht_erreicht &key=<Eintrags-ID>
-                         → {"ok":1,"mail":1,"versuche":n}
-                           {"ok":1,"mail":0,"hinweis":"…"}  (Kunde ohne Mail)
+                         → {"ok":1,"status":"mail","mail_gesendet":"JJJJ-MM-TT HH:MM"}
+                           mail_gesendet null + "hinweis" = Kunde ohne Mail-Adresse
      aktion=termin       &key=<Eintrags-ID>&datum=JJJJ-MM-TT&zeit=HH:MM&dauer=60
-                         → {"ok":1,"termin":"JJJJ-MM-TT HH:mm","link":…}
-   Falscher Code: Make antwortet mit HTTP 401 oder nur "Accepted" (keine
-   Route passt) → die App löscht den Code und zeigt wieder den Login.
+                         → {"ok":1,"status":"erledigt","termin":"JJJJ-MM-TT HH:MM"}
    ===================================================================== */
 const HOOK_URL = "https://hook.eu2.make.com/x281cp9icjlxlyg2r5g8epnotcpt5f1m";
 const KEY_LS="anfragen_key";                      // Login-Code, nur lokal auf dem Handy
@@ -216,6 +215,7 @@ async function call(aktion,params){ // GET, Antwort = JSON mit ok:1
       throw new Error("Make hat nichts gespeichert ("+txt.slice(0,40)+")");
     }
     if(!r.ok) throw new Error("HTTP "+r.status);
+    if(Array.isArray(j)) return j;                       // Liste kommt als reines Array
     if(j.ok!==1&&j.ok!==true&&j.ok!=="1") throw new Error(j.fehler||j.error||"Make meldet Fehler");
     return j;
   } finally{ clearTimeout(t); }
@@ -227,19 +227,15 @@ function fehler(e,was){ if(e instanceof AuthError){ logout(); return; } toast(wa
 
 /* ===== Daten ===== */
 let DATA=[], TAB="offen";
-const LS="anfragen_lokal";              // lokal: wann die Mail gesendet wurde (Make speichert keine Uhrzeit)
-let LOKAL={}; try{LOKAL=JSON.parse(localStorage.getItem(LS)||"{}");}catch(e){}
-function saveLokal(){try{localStorage.setItem(LS,JSON.stringify(LOKAL));}catch(e){}}
-
-function norm(r){ // Make-Datensatz → einheitliches Objekt
+function normStatus(v){ const st=String(v||"").toLowerCase().trim();
+  if(st==="erledigt"||st.startsWith("termin")) return "erledigt";
+  if(st==="mail"||st.startsWith("nicht")) return "mail";
+  return "neu"; }
+function norm(r){ // Make-Datensatz → einheitliches Objekt (leere Felder = null)
   const f=r.data||r; const g=(...k)=>{for(const x of k){ if(f[x]!==undefined&&f[x]!==null&&f[x]!=="") return f[x]; } return "";};
-  const st=String(g("status")).toLowerCase();
-  const o={ id:String(r.key||g("key","id")), name:g("name"), ort:g("ort"), quelle:g("quelle"), zusammenfassung:g("zusammenfassung","text"),
-    telefon:g("telefon"), mail:g("mail"), eingang:g("eingang"), termin:g("termin"), versuche:Number(g("versuche"))||0,
-    status: st.startsWith("termin")?"erledigt":(st.startsWith("nicht")?"mail":"neu") };
-  const l=LOKAL[o.id]; if(l){ o.mail_gesendet=l.when; o.keineMail=!!l.keineMail; }
-  if(!o.keineMail && o.status==="mail" && !hasMail(o.mail)) o.keineMail=true;
-  return o;
+  return { id:String(g("id","key")), name:g("name"), ort:g("ort"), quelle:g("quelle"), zusammenfassung:g("zusammenfassung","text"),
+    telefon:g("telefon"), mail:g("mail"), eingang:g("eingang"), termin:g("termin"), mail_gesendet:g("mail_gesendet"),
+    status:normStatus(g("status")) };
 }
 async function load(){
   $("#rfr").style.opacity=.5;
@@ -247,7 +243,6 @@ async function load(){
     const j=await call("liste");
     const arr=Array.isArray(j)?j:(j.liste||j.records||[]);
     DATA=arr.map(norm).filter(x=>x.id).sort((a,b)=>ts(b.eingang)-ts(a.eingang));
-    const ids=new Set(DATA.map(x=>x.id)); Object.keys(LOKAL).forEach(k=>{ if(!ids.has(k)) delete LOKAL[k]; }); saveLokal();
   }catch(e){ $("#rfr").style.opacity=1; if(e instanceof AuthError){ logout(); return false; }
     toast("Laden fehlgeschlagen: "+e.message,true,true); if(!DATA.length){ $("#list").innerHTML='<div class="info">Keine Verbindung zu Make.<br>Bitte <b class="gold">Aktualisieren</b> tippen.</div>'; return false; } }
   $("#rfr").style.opacity=1; render(); return true;
@@ -256,14 +251,14 @@ async function load(){
 /* ===== Anzeige ===== */
 const HINWEIS="Keine Mail-Adresse – bitte per WhatsApp/SMS";
 function noteMail(o){
-  const v=o.versuche>1?' · <b>'+o.versuche+'. Versuch</b>':'';
-  if(o.keineMail){
+  if(o.mail_gesendet) return '<div class="note">✉️ <b class="gold">Mail gesendet</b> am '+esc(fmt(o.mail_gesendet))+'</div>';
+  if(!hasMail(o.mail)){
     const tel=telClean(o.telefon);
     const wa=tel?'<a class="blue" href="'+esc(waUrl(o.telefon))+'" target="_blank" rel="noopener">WhatsApp</a>':'WhatsApp';
     const sms=tel?'<a class="blue" href="sms:'+esc(tel)+'">SMS</a>':'SMS';
-    return '<div class="note">⚠️ <b class="red">Keine Mail-Adresse</b> – bitte per '+wa+'/'+sms+v+'</div>';
+    return '<div class="note">⚠️ <b class="red">Keine Mail-Adresse</b> – bitte per '+wa+'/'+sms+'</div>';
   }
-  return '<div class="note">✉️ <b class="gold">Mail gesendet</b>'+(o.mail_gesendet?' am '+esc(fmt(o.mail_gesendet)):'')+v+'</div>';
+  return '<div class="note">📵 <b class="gold">Nicht erreicht</b></div>';
 }
 function render(){
   const offen=DATA.filter(x=>x.status!=="erledigt"), erl=DATA.filter(x=>x.status==="erledigt");
@@ -298,13 +293,13 @@ $("#list").addEventListener("click",e=>{
 
 /* ===== Aktionen ===== */
 async function nichtErreicht(o,btn){
-  if(o.status==="mail" && !confirm(o.keineMail?"Nochmal als „nicht erreicht“ zählen?":"Mail wurde schon gesendet. Nochmal senden?")) return;
+  if(o.status==="mail" && !confirm(o.mail_gesendet?"Mail wurde schon gesendet. Nochmal senden?":"Nochmal als „nicht erreicht“ melden?")) return;
   btn.disabled=true;
   try{ const j=await call("nicht_erreicht",{key:o.id});
-       o.status="mail"; if(j.versuche) o.versuche=Number(j.versuche)||o.versuche+1; else o.versuche++;
-       if(Number(j.mail)===1){ o.keineMail=false; o.mail_gesendet=new Date().toISOString(); LOKAL[o.id]={when:o.mail_gesendet}; toast("✉️ Mail an "+(o.name||"Kunde")+" gesendet"); }
-       else { o.keineMail=true; LOKAL[o.id]={keineMail:true}; toast("⚠️ "+HINWEIS,true,true); }
-       saveLokal(); render(); }
+       o.status=normStatus(j.status||"mail");
+       if(j.mail_gesendet){ o.mail_gesendet=j.mail_gesendet; toast("✉️ Mail an "+(o.name||"Kunde")+" gesendet"); }
+       else { o.mail_gesendet=""; toast("⚠️ "+HINWEIS,true,true); }
+       render(); }
   catch(e){ fehler(e,"Senden fehlgeschlagen"); btn.disabled=false; }
 }
 let T=null;
@@ -318,7 +313,7 @@ $("#tOk").onclick=async()=>{
   const dv=$("#tDate").value, tv=$("#tTime").value; if(!dv||!tv){toast("Bitte Datum und Uhrzeit wählen",true);return;}
   const btn=$("#tOk"); btn.disabled=true;
   try{ const j=await call("termin",{key:T.id,datum:dv,zeit:tv,dauer:60});
-       T.status="erledigt"; T.termin=j.termin||(dv+" "+tv);
+       T.status=normStatus(j.status||"erledigt"); T.termin=j.termin||(dv+" "+tv);
        $("#ovTermin").classList.add("hide"); toast("📅 Termin gespeichert: "+fmtTermin(T.termin)); render(); }
   catch(e){ fehler(e,"Speichern fehlgeschlagen"); }
   btn.disabled=false;
@@ -333,7 +328,7 @@ $("#nOk").onclick=async()=>{
   try{ const j=await call("neu",p);
        $("#ovNeu").classList.add("hide"); TAB="offen";
        if(Number(j.dublette)===1){ toast("Schon vorhanden (letzte 30 Tage) – nicht doppelt angelegt",true,true); }
-       else { toast("Anfrage angelegt"); DATA.unshift({id:String(j.key||("lokal-"+Date.now())),name,ort:p.ort,quelle:QUELLE,zusammenfassung:p.text,telefon:p.telefon,mail:p.mail,eingang:new Date().toISOString(),status:"neu",versuche:0}); render(); }
+       else { toast("Anfrage angelegt"); DATA.unshift({id:String(j.key||("lokal-"+Date.now())),name,ort:p.ort,quelle:QUELLE,zusammenfassung:p.text,telefon:p.telefon,mail:p.mail,eingang:new Date().toISOString(),status:"neu",mail_gesendet:""}); render(); }
        load(); }
   catch(e){ fehler(e,"Anlegen fehlgeschlagen"); }
   btn.disabled=false;
